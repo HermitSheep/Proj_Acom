@@ -68,7 +68,6 @@ espera_linha:
     JZ   espera_linha  ; se nenhuma tecla premida, repete
 
                        ; Converter 1248 -> 0123
-    ADD  R6, 1         ; volta a ser a linha verificada neste ciclo
     MOV  R10, R6       ; guarda a linha (convertida) no R10
     MOV  R11, R0       ; guarda a coluna no R11
     MOV  R7, CONTADOR_C; inicia o contador de SHR da coluna
