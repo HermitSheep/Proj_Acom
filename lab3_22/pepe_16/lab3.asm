@@ -56,6 +56,8 @@ espera_linha:
     JZ   espera_linha  ; se nenhuma tecla premida, repete
                        ; vai mostrar a linha e a coluna da tecla
     SHL  R1, 4         ; coloca linha no nibble high
+    MOV R10, R1        ; guarda a linha no R10
+    MOV R11, R0        ; guarda a coluna no R11
     OR   R1, R0        ; junta coluna (nibble low)
     MOVB [R4], R1      ; escreve linha e coluna nos displays
     
