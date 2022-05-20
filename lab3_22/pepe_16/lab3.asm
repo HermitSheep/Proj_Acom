@@ -22,6 +22,7 @@ MASCARA    EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas 
 
 ; **********************************************************************
 ; * Variaveis
+CONTADOR_SHR  WORD 4   ; conta a linha que está a ser verificada, começa na 4 e vai para baixo
 ; **********************************************************************
 ;LINHA WORD 8  ;  linha a testar (começa pela quarta, mas deve andar por shifts até à 1 e voltar)
               ;  (NÂO TER DEFINIDA AO MESMO TEMPO QUE A CONSTANTE)
@@ -33,10 +34,11 @@ MASCARA    EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas 
 PLACE      0
 inicio:		
 ; inicializacoes
-    MOV  R2, TEC_LIN   ; endereco do periferico das linhas
-    MOV  R3, TEC_COL   ; endereco do periferico das colunas
-    MOV  R4, DISPLAYS  ; endereco do periferico dos displays
-    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+    MOV  R2, TEC_LIN      ; endereco do periferico das linhas
+    MOV  R3, TEC_COL      ; endereco do periferico das colunas
+    MOV  R4, DISPLAYS     ; endereco do periferico dos displays
+    MOV  R5, MASCARA      ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+    MOV  R6, CONTADOR_SHR ; linha a ser verifica em decimal
 
 ; corpo principal do programa
 ciclo:
@@ -45,22 +47,25 @@ ciclo:
 
 espera_tecla:          ; neste ciclo espera-se ate uma tecla ser premida
     MOV  R1, LINHA     ; testar a linha 4 
+    MOV  
 espera_linha:
-    CMP  R1, 0         ; já viu todas as linhas?
+    CMP  R1, 0        ; já viu todas as linhas?
     JZ   espera_tecla  ; se linha é 0; repete
     MOVB [R2], R1      ; escrever no periferico de saida (linhas)
     MOVB R0, [R3]      ; ler do periferico de entrada (colunas)
-    SHR  R1, 1         ; faz shift left do ID da linha para a linha seguinte
+    SHR  R1, 1         ; faz shift right do ID da linha para a linha seguinte
     AND  R0, R5        ; elimina bits para alem dos bits 0-3
     CMP  R0, 0         ; ha tecla premida?
     JZ   espera_linha  ; se nenhuma tecla premida, repete
                        ; vai mostrar a linha e a coluna da tecla
-    SHL  R1, 4         ; coloca linha no nibble high
     MOV R10, R1        ; guarda a linha no R10
     MOV R11, R0        ; guarda a coluna no R11
+    SHL  R1, 4         ; coloca linha no nibble high
     OR   R1, R0        ; junta coluna (nibble low)
     MOVB [R4], R1      ; escreve linha e coluna nos displays
     
+
+
 ha_tecla:              ; neste ciclo espera-se ate NENHUMA tecla estar premida
     MOV  R1, LINHA     ; testar a linha 4  (R1 tinha sido alterado)
     MOVB [R2], R1      ; escrever no periferico de saida (linhas)
