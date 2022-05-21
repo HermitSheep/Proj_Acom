@@ -14,7 +14,7 @@
 DISPLAYS     EQU 0A000H  ; endereco dos displays de 7 segmentos (periferico POUT-1)
 TEC_LIN      EQU 0C000H  ; endereco das linhas do teclado (periferico POUT-2)
 TEC_COL      EQU 0E000H  ; endereco das colunas do teclado (periferico PIN)
-LINHA        EQU 8       ; linha a testar (4a linha, 1000b) em variavel para fazer os shifts
+LINHA        EQU 16      ; linha a testar (5a linha, 10000b), sendo que a sua primeira operação é SHR
 MASCARA      EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 LETRA_A      EQU 0       ; letra A
 LETRA_B      EQU 1       ; letra B
@@ -57,11 +57,11 @@ espera_tecla:          ; Encontra coluna/linha
     MOV  R1, LINHA     ; testar a linha 4 
     MOV  R6, CONTADOR_L; linha a ser verificada em decimal
 espera_linha:
+    SHR  R1, 1         ; faz shift right do "ID" da linha para a linha seguinte
     CMP  R1, 0         ; já viu todas as linhas?
     JZ   espera_tecla  ; se linha é 0; repete
     MOVB [R2], R1      ; escrever no periferico de saida (linhas)
     MOVB R0, [R3]      ; ler do periferico de entrada (colunas)
-    SHR  R1, 1         ; faz shift right do "ID" da linha para a linha seguinte
     SUB  R6, 1         ; atualiza o contador das linhas
     AND  R0, R5        ; elimina bits para alem dos bits 0-3
     CMP  R0, 0         ; ha tecla premida?
@@ -93,10 +93,10 @@ conta_colunas:
                        ; se não for nenhuma das duas volta à procura da tecla
 
 ha_tecla:              ; Espera até que a mesma tecla não esteja a ser primida
-    SHR  R1, 1         ; corrige o desvio feito em espera linhas
     MOVB [R2], R1      ; escrever no periferico de saida (linhas)
     MOVB R0, [R3]      ; ler do periferico de entrada (colunas)
     AND  R0, R5        ; elimina bits para alem dos bits 0-3
+    MOV  R6, 0
     CMP  R0, R8        ; a mesma tecla está premida?
     JZ  ha_tecla       ; se sim salta vola a verificar
     JMP  espera_tecla  ; se sim repete o ciclo
