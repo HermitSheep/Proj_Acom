@@ -70,6 +70,7 @@ espera_linha:
                        ; Converter 1248 -> 0123
     MOV  R10, R6       ; guarda a linha (convertida) no R10
     MOV  R11, R0       ; guarda a coluna no R11
+    MOV  R8,  R0       ; guarda a coluna no R11
     MOV  R7, CONTADOR_C; inicia o contador de SHR da coluna
 conta_colunas:
     ADD  R7, 1         ; conta um shift
@@ -93,11 +94,11 @@ conta_colunas:
 
 
 ha_tecla:              ; neste ciclo espera-se ate NENHUMA tecla estar premida
-    MOV  R1, LINHA     ; testar a linha 4  (R1 tinha sido alterado)
+    SHR  R1, 1         ; corrigir o shift da linha
     MOVB [R2], R1      ; escrever no periferico de saida (linhas)
     MOVB R0, [R3]      ; ler do periferico de entrada (colunas)
     AND  R0, R5        ; elimina bits para alem dos bits 0-3
-    CMP  R0, 0         ; ha tecla premida?
-    JNZ  ha_tecla      ; se ainda houver uma tecla premida, espera ate nao haver
-    JMP  ciclo         ; repete ciclo
+    CMP  R0, R8        ; ha tecla premida?
+    JZ  ha_tecla      ; se ainda houver uma tecla premida, espera ate nao haver
+    JMP  espera_tecla  ; repete ciclo
 
