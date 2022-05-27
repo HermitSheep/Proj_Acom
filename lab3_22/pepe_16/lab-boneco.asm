@@ -15,14 +15,14 @@ DEFINE_LINHA    		EQU 600AH      ; endereço do comando para definir a linha
 DEFINE_COLUNA   		EQU 600CH      ; endereço do comando para definir a coluna
 DEFINE_PIXEL    		EQU 6012H      ; endereço do comando para escrever um pixel
 APAGA_AVISO     		EQU 6040H      ; endereço do comando para apagar o aviso de nenhum cenário selecionado
-APAGA_ECRÃ	 		EQU 6002H      ; endereço do comando para apagar todos os pixels já desenhados
-SELECIONA_CENARIO_FUNDO  EQU 6042H      ; endereço do comando para selecionar uma imagem de fundo
+APAGA_ECRA	 			EQU 6002H      ; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_CENARIO_FUNDO EQU 6042H      ; endereço do comando para selecionar uma imagem de fundo
 
-LINHA        		EQU  16        ; linha do boneco (a meio do ecrã))
-COLUNA			EQU  30        ; coluna do boneco (a meio do ecrã)
+LINHA        			EQU  16        ; linha do boneco (a meio do ecrã))
+COLUNA					EQU  30        ; coluna do boneco (a meio do ecrã)
 
-LARGURA		EQU	5			; largura do boneco
-COR_PIXEL		EQU	0FF00H		; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+LARGURA					EQU	5			; largura do boneco
+COR_PIXEL				EQU	0FF00H		; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
 ; #######################################################################
 ; * ZONA DE DADOS 
@@ -40,7 +40,7 @@ DEF_BONECO:					; tabela que define o boneco (cor, largura, pixels)
 	PLACE   0				; o código tem de começar em 0000H
 inicio:
      MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+     MOV  [APAGA_ECRA], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
 	MOV	R1, 0			; cenário de fundo número 0
      MOV  [SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
      
