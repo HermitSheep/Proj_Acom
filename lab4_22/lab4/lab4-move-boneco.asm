@@ -46,8 +46,7 @@ DEF_BONECO:				; tabela que define o boneco (cor, largura, pixels)
 ; *********************************************************************************
 PLACE   0                  				; o código tem de começar em 0000H
 inicio:
-	MOV  SP, SP_inicial					; inicializa SP para a palavra a seguir
-										; à última da pilha
+	MOV  SP, SP_inicial					; inicializa SP para a palavra a seguirà última da pilha
                             
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV [APAGA_ECRA], R1				; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
@@ -96,7 +95,7 @@ desenha_pixels:       		; desenha os pixels do boneco a partir da tabela
 	MOV	R3, [R4]			; obtém a cor do próximo pixel do boneco
 	CALL	escreve_pixel	; escreve cada pixel do boneco
 	ADD	R4, 2				; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
-    ADD R2, 1         	; próxima coluna
+    ADD R2, 1         		; próxima coluna
     SUB R5, 1				; menos uma coluna para tratar
     JNZ  desenha_pixels  	; continua até percorrer toda a largura do objeto
 	POP	R5

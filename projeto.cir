@@ -10,8 +10,8 @@
   "primary screen width" : 1600,
   "primary screen height" : 900,
   "window" : {
-    "X absolute" : 0,
-    "Y absolute" : 27,
+    "X absolute" : 1920,
+    "Y absolute" : 131,
     "X relative" : 0,
     "Y relative" : 27,
     "width" : 1600,
@@ -766,7 +766,7 @@
       "pinConnectionID" : -1,
       "pinValueFixed" : "1"
     },
-    "programFilePathName" : "lab4_22/lab4/lab4-move-boneco-teclado.asm",
+    "programFilePathName" : "Projeto.asm",
     "nTabSpaces" : 4,
     "textEncoding" : "UTF-8",
     "bus interface" : {
@@ -1520,8 +1520,8 @@
     "positionX" : 675,
     "positionY" : 247,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 618,
-    "simGuiYRelative" : 250,
+    "simGuiXRelative" : 724,
+    "simGuiYRelative" : 417,
     "simGuiWidth" : 853,
     "simGuiHeight" : 427,
     "columnAddressNBits" : 6,
