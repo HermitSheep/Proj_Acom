@@ -5,8 +5,6 @@
 ; *            Permite ler teclas precionadas no teclado.
 ; *            Incrementa o display quando se clica em A e decrementa quando se clica em B.
 ; *
-; * Esclarecimentos: Argumentos são os registos que são utilisados
-; * 				 Resultados são registos que são alterados pela função.
 ; * Programador: Utilizar tabs em vez de espaços sempre que possivel.
 ; *  			 Comentar todas as linhas que não sejam repetidas e ainda
 ; *				 não tenham sido comentadas.
@@ -27,13 +25,14 @@ MIN_COLUNA		EQU  0		; número da coluna mais à esquerda que o objeto pode ocupa
 MAX_COLUNA		EQU  63		; número da coluna mais à direita que o objeto pode ocupar
 ATRASO			EQU	400H	; atraso para limitar a velocidade de movimento
 
-; Le tecla
+; Teclado
 LINHA_LEITURA	EQU 16		; linha a testar (5a linha, 10000b), sendo que a sua primeira operação é SHR
 CONTADOR_L  	EQU 4		; conta a linha que está a ser verificada, começa na 4 e vai para baixo
 CONTADOR_C   	EQU 0		; conta os SHR precisos para a coluna passar a ser 0 (para converter para o valor certo)
-; Incrementa / decrementa
-LETRA_A      	EQU 0FH		; incrementa
-LETRA_B      	EQU 0EH		; decrementa
+
+; Funcões teclas
+LETRA_A      	EQU 0FH		; incrementa display
+LETRA_B      	EQU 0EH		; decrementa display
 
 ; Comandos media-center
 DEFINE_LINHA    		EQU 600AH   ; endereço do comando para definir a linha
@@ -43,13 +42,28 @@ APAGA_AVISO     		EQU 6040H   ; endereço do comando para apagar o aviso de nenh
 APAGA_ECRA		 		EQU 6002H   ; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU 6042H   ; endereço do comando para selecionar uma imagem de fundo
 
-; Rovers e Asteroides
-LARGURA			EQU	5		; largura do boneco
-ALTURA      	EQU 2		; altura do boneco
-COR_PIXEL		EQU	0FF00H	; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-LINHA        	EQU  16     ; linha do boneco (a meio do ecrã))
-COLUNA			EQU  30     ; coluna do boneco (a meio do ecrã)
+; Paleta de cores
+ENC		EQU	0FF00H	; cor pixel: vermelho (encarnado)
+AMA		EQU 0FFFFH	; cor pixel: amarelo
+VER1	EQU 0F0F0H	; cor pixel: verde claro
+VER2	EQU 0F8C0H	; cor pixel: verde escuro
+AZU1	EQU 0F0FFH	; cor pixel: azul claro
+AZU2	EQU 0F00FH	; cor pixel: azul escuro
+ROX		EQU 0FF0FH	; cor pixel: roxo
+CIN		EQU 0FAAAH	; cor pixel: cinzento claro
+WHI		EQU 0FFFFH	; cor pixel: branco (white)
 
+; Rover
+LINHA_R        	EQU 16  ; linha de começo do rover (a meio do ecrã))
+COLUNA_R		EQU 30  ; coluna de começo do rover (a meio do ecrã)
+ALTURA_R		EQU 4	; altura do rover
+LARGURA_R		EQU 5	; largura do rover
+
+; Asteroide mao
+LINHA_AM		EQU 15  ; linha de começo do cover (a meio do ecrã))
+COLUNA_AM		EQU 30  ; coluna de começo do rover (a meio do ecrã)
+ALTURA_AM		EQU 5	; altura do rover
+LARGURA_AM		EQU 5	; largura do rover
 
 ; *********************************************************************************
 ; * Dados 
@@ -62,9 +76,31 @@ SP_inicial:				; este é o endereço (1200H) com que o SP deve ser
 						; inicializado. O 1.º end. de retorno será 
 						; armazenado em 11FEH (1200H-2)
 							
-DEF_BONECO:				; tabela que define o boneco (cor, largura, pixels)
-	WORD		ALTURA, LARGURA
-	WORD		COR_PIXEL, 0, COR_PIXEL, 0, COR_PIXEL		; # # #   as cores podem ser diferentes
+DEF_ROVER:								; lista que define o rover (tamanho e pixeis)
+	WORD		ALTURA_R, LARGURA_R		; para ler a informação seguinte é priciso incrementar
+										; ou decrementar o endereço de 2 em 2
+	WORD		WHI, WHI, AMA, WHI, WHI	; # # #   as cores podem ser diferentes
+	WORD		AMA, WHI, AMA, WHI, AMA
+	WORD		AMA, AMA, AMA, AMA, AMA
+	WORD		WHI, AMA, WHI, AMA, WHI
+
+DEF_ASTEROIDE_BOM:
+	WORD		ALTURA_AM, LARGURA_AM
+
+	WORD		WHI , VER1, VER1, VER1, WHI
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		WHI , VER1, VER1, VER1, WHI
+
+DEF_ASTEROIDE_MAO:
+	WORD		ALTURA_AM, LARGURA_AM
+
+	WORD		ENC, WHI, ENC, ENC, ENC  ; (Suastica, se quizerem mudar já sabem como)
+	WORD		ENC, WHI, ENC, WHI, WHI  ; (a ideia é destruir os asteroides nazis)
+	WORD		ENC, ENC, ENC, ENC, ENC  ; (ou os hindus e budistas, porque os nazis foram os primeiros
+	WORD		WHI, WHI, ENC, WHI, ENC  ; apropriadores culturais)
+	WORD		ENC, ENC, ENC, WHI, ENC
      
 
 ; **********************************************************************
@@ -115,9 +151,9 @@ inicio:
 ; 				R10 --> posição em linha da tecla            (em formato 0123)
 ; 				R11 --> posição em coluna da tecla           (em formato 0123)
 ;
-; Resultados:	R1  --> input do teclado                     (linhas)
-;				R8  --> posição em coluna da tecla           (em formato 1248)
-;				R9  --> valor da tecla primida
+; Retorna:	R1  --> input do teclado                     (linhas)
+;			R8  --> posição em coluna da tecla           (em formato 1248)
+;			R9  --> valor da tecla primida
 ;
 ; **********************************************************************
 le_tecla:

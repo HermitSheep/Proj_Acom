@@ -15,6 +15,7 @@ MASCARA					EQU 0FH		; para isolar os 4 bits de menor peso, ao ler as colunas do
 TECLA_ESQUERDA			EQU 1		; tecla na primeira coluna do teclado (tecla C)
 TECLA_DIREITA			EQU 2		; tecla na segunda coluna do teclado (tecla D)
 
+
 DEFINE_LINHA    		EQU 600AH   ; endereço do comando para definir a linha
 DEFINE_COLUNA   		EQU 600CH   ; endereço do comando para definir a coluna
 DEFINE_PIXEL    		EQU 6012H   ; endereço do comando para escrever um pixel
@@ -32,7 +33,16 @@ ATRASO					EQU	400H	; atraso para limitar a velocidade de movimento do boneco
 LARGURA					EQU	5		; largura do boneco
 ALTURA      			EQU 2		; altura do boneco
 COR_PIXEL				EQU	0FF00H	; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-
+; Paleta de cores
+ENC		EQU	0FF00H	; cor pixel: vermelho (encarnado)
+AMA		EQU 0FFFFH	; cor pixel: amarelo
+VER1	EQU 0F0F0H	; cor pixel: verde claro
+VER2	EQU 0F8C0H	; cor pixel: verde escuro
+AZU1	EQU 0F0FFH	; cor pixel: azul claro
+AZU2	EQU 0F00FH	; cor pixel: azul escuro
+ROX		EQU 0FF0FH	; cor pixel: roxo
+CIN		EQU 0FAAAH	; cor pixel: cinzento claro
+WHI		EQU 0FFFFH	; cor pixel: branco (white)
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -48,6 +58,31 @@ DEF_BONECO:				; tabela que define o boneco (cor, largura, pixels)
 	WORD		ALTURA, LARGURA
 	WORD		COR_PIXEL, 0, COR_PIXEL, 0, COR_PIXEL		; # # #   as cores podem ser diferentes
      
+DEF_ROVER:								; lista que define o rover (tamanho e pixeis)
+	WORD		ALTURA_R, LARGURA_R		; para ler a informação seguinte é priciso incrementar
+										; ou decrementar o endereço de 2 em 2
+	WORD		WHI, WHI, AMA, WHI, WHI	; # # #   as cores podem ser diferentes
+	WORD		AMA, WHI, AMA, WHI, AMA
+	WORD		AMA, AMA, AMA, AMA, AMA
+	WORD		WHI, AMA, WHI, AMA, WHI
+
+DEF_ASTEROIDE_BOM:
+	WORD		ALTURA_AM, LARGURA_AM
+
+	WORD		WHI , VER1, VER1, VER1, WHI
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		VER1, VER1, VER1, VER1, VER1
+	WORD		WHI , VER1, VER1, VER1, WHI
+
+DEF_ASTEROIDE_MAO:
+	WORD		ALTURA_AM, LARGURA_AM
+
+	WORD		ENC, WHI, ENC, ENC, ENC  ; (Suastica, se quizerem mudar já sabem como)
+	WORD		ENC, WHI, ENC, WHI, WHI  ; (a ideia é destruir os asteroides nazis)
+	WORD		ENC, ENC, ENC, ENC, ENC  ; (ou os hindus e budistas, porque os nazis foram os primeiros
+	WORD		WHI, WHI, ENC, WHI, ENC  ; apropriadores culturais)
+	WORD		ENC, ENC, ENC, WHI, ENC
 
 ; *********************************************************************************
 ; * Código
@@ -66,7 +101,7 @@ inicio:
 posição_boneco:
     MOV R1, LINHA						; linha do boneco
     MOV R2, COLUNA						; coluna do boneco
-	MOV	R4, DEF_BONECO					; endereço da tabela que define o boneco
+	MOV	R4, DEF_ROVER					; endereço da tabela que define o boneco
 
 mostra_boneco:
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
@@ -75,7 +110,7 @@ espera_tecla:							; neste ciclo espera-se até uma tecla ser premida
 	MOV R6, LINHA_TECLADO				; linha a testar no teclado
 	CALL	teclado						; leitura às teclas
 	CMP	R0, 0
-	JZ	espera_tecla						; espera, enquanto não houver tecla
+	JZ	espera_tecla					; espera, enquanto não houver tecla
 	CMP	R0, TECLA_ESQUERDA
 	JNZ	testa_direita
 	MOV	R7, -1							; vai deslocar para a esquerda
@@ -105,7 +140,10 @@ coluna_seguinte:
 ;			    com a forma e cor definidas na tabela indicada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
-;               R4 - tabela que define o boneco
+;               R4 - tabela que define o rover
+;				R5 - contador de colunas
+;				R6 - contador de linhas
+;				R7 - guarda n colunas
 ;
 ; **********************************************************************
 desenha_boneco:
@@ -115,25 +153,28 @@ desenha_boneco:
 	PUSH	R4
 	PUSH	R5
 	PUSH    R6
-	MOV	R6, [R4]			; obtém a altura do boneco
-	ADD	R4, 2				; endereço da cor do 1º pixel (2 porque a largura é uma word)
-	MOV R5, [R4]
-	ADD R4, 2
-desenha_pixels:       		; desenha os pixels do boneco a partir da tabela
+	PUSH	R7
+	
+	MOV	R6, [R4]			; obtém a altura do boneco (n linhas)
+	ADD	R4, 2				; endereço da largura
+	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
+	MOV	R7, R5				; guardar o n colunas para poder dar reset em cada linha
+	ADD R4, 2				; obtém a cor do primeiro pixel
+desenha_coluna:       		; desenha os pixels desta coluna do rover
+desenha_linha:				; desenha os pixels desta linha do rover
 	MOV	R3, [R4]			; obtém a cor do próximo pixel do boneco
 	CALL	escreve_pixel	; escreve cada pixel do boneco
 	ADD	R4, 2				; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
     ADD R2, 1				; próxima coluna
     SUB R5, 1				; menos uma coluna para tratar
-    JNZ	desenha_pixels		; continua até percorrer toda a largura do objetoD R5, 5
-	ADD R1, 1
-	ADD R5, 5
-	SUB R2, 5
-	SUB R4, 5
-	SUB R4, 5
-	SUB R6, 1
-	JNZ	desenha_pixels
-	 
+    JNZ	desenha_linhas		; continua até percorrer toda a largura do objetoD R5, 5
+	ADD R1, 1				; próxima linha
+	MOV R5, R7				; puxar o contador para o inicio da linha
+	SUB R2, R7				; coltar para o inicio da linha
+	SUB R6, 1				; menos uma linha para tratar
+	JNZ	desenha_coluna
+
+	POP R7
 	POP R6
 	POP	R5
 	POP	R4
@@ -157,26 +198,26 @@ apaga_boneco:
 	PUSH	R4
 	PUSH	R5
 	PUSH 	R6
+	PUSH	R7
 
-	MOV	R6, [R4]			; obtém a altura do boneco
-	ADD	R4, 2				; endereço da cor do 1º pixel (2 porque a largura é uma word)
-	MOV	R5, [R4]
-	ADD	R4, 2
-apaga_pixels:       		; desenha os pixels do boneco a partir da tabela
-	MOV	R3, 0				; cor para apagar o próximo pixel do boneco
+	MOV	R6, [R4]			; obtém a altura do boneco (n linhas)
+	ADD	R4, 2				; endereço da largura
+	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
+	MOV	R7, R5				; guardar o n colunas para poder dar reset em cada linha
+apaga_coluna:       		; apaga os pixels desta coluna do rover
+apaga_linha:				; apaga os pixels desta linha do rover
+	MOV	R3, 0				; obtém a cor do próximo pixel do boneco
 	CALL	escreve_pixel	; escreve cada pixel do boneco
-	ADD	R4, 2				; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
     ADD R2, 1				; próxima coluna
     SUB R5, 1				; menos uma coluna para tratar
-    JNZ	apaga_pixels   	; continua até percorrer toda a largura do objeto
-	ADD R1, 1
-	ADD R5, 5
-	SUB R2, 5
-	SUB R4, 5
-	SUB R4, 5
-	SUB R6, 1
-	JNZ apaga_pixels
+    JNZ	apaga_linhas		; continua até percorrer toda a largura do objetoD R5, 5
+	ADD R1, 1				; próxima linha
+	MOV R5, R7				; puxar o contador para o inicio da linha
+	SUB R2, R7				; coltar para o inicio da linha
+	SUB R6, 1				; menos uma linha para tratar
+	JNZ	apaga_coluna
 
+	POP R7
 	POP R6
 	POP	R5
 	POP	R4
