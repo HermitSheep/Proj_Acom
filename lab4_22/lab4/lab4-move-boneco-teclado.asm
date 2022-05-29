@@ -23,19 +23,14 @@ APAGA_AVISO     		EQU 6040H   ; endereço do comando para apagar o aviso de nenh
 APAGA_ECRA		 		EQU 6002H   ; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU 6042H   ; endereço do comando para selecionar uma imagem de fundo
 
-LINHA        			EQU  16     ; linha do boneco (a meio do ecrã))
-COLUNA					EQU  30     ; coluna do boneco (a meio do ecrã)
-
 MIN_COLUNA				EQU  0		; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COLUNA				EQU  63     ; número da coluna mais à direita que o objeto pode ocupar
 ATRASO					EQU	400H	; atraso para limitar a velocidade de movimento do boneco
 
-LARGURA					EQU	5		; largura do boneco
-ALTURA      			EQU 2		; altura do boneco
-COR_PIXEL				EQU	0FF00H	; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+
 ; Paleta de cores
 ENC		EQU	0FF00H	; cor pixel: vermelho (encarnado)
-AMA		EQU 0FFFFH	; cor pixel: amarelo
+AMA		EQU 0FFF0H	; cor pixel: amarelo
 VER1	EQU 0F0F0H	; cor pixel: verde claro
 VER2	EQU 0F8C0H	; cor pixel: verde escuro
 AZU1	EQU 0F0FFH	; cor pixel: azul claro
@@ -43,6 +38,27 @@ AZU2	EQU 0F00FH	; cor pixel: azul escuro
 ROX		EQU 0FF0FH	; cor pixel: roxo
 CIN		EQU 0FAAAH	; cor pixel: cinzento claro
 WHI		EQU 0FFFFH	; cor pixel: branco (white)
+TRA		EQU 00000H	; cor pixel: transparente
+
+; Rover
+LINHA_R        	EQU 27  ; linha de começo do rover (a meio do ecrã))
+COLUNA_R		EQU 30  ; coluna de começo do rover (a meio do ecrã)
+ALTURA_R		EQU 5	; altura do rover
+LARGURA_R		EQU 5	; largura do rover
+
+; Asteroide mao
+LINHA_AM		EQU 15  ; linha de começo do cover (a meio do ecrã))
+COLUNA_AM		EQU 30  ; coluna de começo do rover (a meio do ecrã)
+ALTURA_AM		EQU 5	; altura do rover
+LARGURA_AM		EQU 5	; largura do rover
+
+; Asteroide bom
+LINHA_AB		EQU 15  ; linha de começo do cover (a meio do ecrã))
+COLUNA_AB		EQU 30  ; coluna de começo do rover (a meio do ecrã)
+ALTURA_AB		EQU 5	; altura do rover
+LARGURA_AB		EQU 5	; largura do rover
+
+
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -54,35 +70,33 @@ SP_inicial:				; este é o endereço (1200H) com que o SP deve ser
 						; inicializado. O 1.º end. de retorno será 
 						; armazenado em 11FEH (1200H-2)
 							
-DEF_BONECO:				; tabela que define o boneco (cor, largura, pixels)
-	WORD		ALTURA, LARGURA
-	WORD		COR_PIXEL, 0, COR_PIXEL, 0, COR_PIXEL		; # # #   as cores podem ser diferentes
      
-DEF_ROVER:								; lista que define o rover (tamanho e pixeis)
-	WORD		ALTURA_R, LARGURA_R		; para ler a informação seguinte é priciso incrementar
-										; ou decrementar o endereço de 2 em 2
-	WORD		WHI, WHI, AMA, WHI, WHI	; # # #   as cores podem ser diferentes
-	WORD		AMA, WHI, AMA, WHI, AMA
-	WORD		AMA, AMA, AMA, AMA, AMA
-	WORD		WHI, AMA, WHI, AMA, WHI
+DEF_ROVER:												; lista que define o rover (tamanho e pixeis)
+	WORD		LINHA_R, COLUNA_R, ALTURA_R, LARGURA_R	; para ler a informação seguinte é priciso incrementar
+														; ou decrementar o endereço de 2 em 2
+	WORD		TRA,  TRA,  AZU2, TRA,  TRA				; # # #   as cores podem ser diferentes
+	WORD		TRA,  AZU2, AMA,  AZU2, TRA
+	WORD		AZU2, AMA,  AMA,  AMA,  AZU2
+	WORD		TRA,  TRA,  AMA,  TRA,  TRA
+	WORD		TRA,  AMA,  AZU1, AMA,  TRA
 
 DEF_ASTEROIDE_BOM:
-	WORD		ALTURA_AM, LARGURA_AM
+	WORD		LINHA_AB, COLUNA_AB, ALTURA_AB, LARGURA_AB
 
-	WORD		WHI , VER1, VER1, VER1, WHI
+	WORD		TRA , VER1, VER1, VER1, TRA
 	WORD		VER1, VER1, VER1, VER1, VER1
 	WORD		VER1, VER1, VER1, VER1, VER1
 	WORD		VER1, VER1, VER1, VER1, VER1
-	WORD		WHI , VER1, VER1, VER1, WHI
+	WORD		TRA , VER1, VER1, VER1, TRA
 
 DEF_ASTEROIDE_MAO:
-	WORD		ALTURA_AM, LARGURA_AM
+	WORD		LINHA_AM, COLUNA_AM, ALTURA_AM, LARGURA_AM
 
 	WORD		ENC, WHI, ENC, ENC, ENC  ; (Suastica, se quizerem mudar já sabem como)
 	WORD		ENC, WHI, ENC, WHI, WHI  ; (a ideia é destruir os asteroides nazis)
 	WORD		ENC, ENC, ENC, ENC, ENC  ; (ou os hindus e budistas, porque os nazis foram os primeiros
 	WORD		WHI, WHI, ENC, WHI, ENC  ; apropriadores culturais)
-	WORD		ENC, ENC, ENC, WHI, ENC
+	WORD		ENC, ENC, ENC, WHI, ENC  ; (peço desculpa...)
 
 ; *********************************************************************************
 ; * Código
@@ -99,9 +113,11 @@ inicio:
 	MOV	R7, 1							; valor a somar à coluna do boneco, para o movimentar
      
 posição_boneco:
-    MOV R1, LINHA						; linha do boneco
-    MOV R2, COLUNA						; coluna do boneco
 	MOV	R4, DEF_ROVER					; endereço da tabela que define o boneco
+    MOV R1, [R4]						; linha do boneco
+	ADD R4, 2							; passa para a palavra seguinte (coluna)
+    MOV R2, [R4]						; coluna do boneco
+	ADD R4, 2							; passa para a palavra seguinte (altura)
 
 mostra_boneco:
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
@@ -160,8 +176,8 @@ desenha_boneco:
 	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
 	MOV	R7, R5				; guardar o n colunas para poder dar reset em cada linha
 	ADD R4, 2				; obtém a cor do primeiro pixel
-desenha_coluna:       		; desenha os pixels desta coluna do rover
-desenha_linha:				; desenha os pixels desta linha do rover
+desenha_colunas:       		; desenha os pixels desta coluna do rover
+desenha_linhas:				; desenha os pixels desta linha do rover
 	MOV	R3, [R4]			; obtém a cor do próximo pixel do boneco
 	CALL	escreve_pixel	; escreve cada pixel do boneco
 	ADD	R4, 2				; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
@@ -172,7 +188,7 @@ desenha_linha:				; desenha os pixels desta linha do rover
 	MOV R5, R7				; puxar o contador para o inicio da linha
 	SUB R2, R7				; coltar para o inicio da linha
 	SUB R6, 1				; menos uma linha para tratar
-	JNZ	desenha_coluna
+	JNZ	desenha_colunas
 
 	POP R7
 	POP R6
@@ -182,6 +198,7 @@ desenha_linha:				; desenha os pixels desta linha do rover
 	POP	R2
 	POP R1
 	RET
+
 
 ; **********************************************************************
 ; APAGA_BONECO - Apaga um boneco na linha e coluna indicadas
@@ -204,8 +221,8 @@ apaga_boneco:
 	ADD	R4, 2				; endereço da largura
 	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
 	MOV	R7, R5				; guardar o n colunas para poder dar reset em cada linha
-apaga_coluna:       		; apaga os pixels desta coluna do rover
-apaga_linha:				; apaga os pixels desta linha do rover
+apaga_colunas:       		; apaga os pixels desta coluna do rover
+apaga_linhas:				; apaga os pixels desta linha do rover
 	MOV	R3, 0				; obtém a cor do próximo pixel do boneco
 	CALL	escreve_pixel	; escreve cada pixel do boneco
     ADD R2, 1				; próxima coluna
@@ -215,7 +232,7 @@ apaga_linha:				; apaga os pixels desta linha do rover
 	MOV R5, R7				; puxar o contador para o inicio da linha
 	SUB R2, R7				; coltar para o inicio da linha
 	SUB R6, 1				; menos uma linha para tratar
-	JNZ	apaga_coluna
+	JNZ	apaga_colunas
 
 	POP R7
 	POP R6
