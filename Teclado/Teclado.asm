@@ -64,18 +64,22 @@ DEF_BONECO:				; tabela que define o boneco (cor, largura, pixels)
 ; **********************************************************************
 ; * Inicializações
 ; **********************************************************************
-    MOV  R2, TEC_LIN      ; endereco do periferico das linhas
-    MOV  R3, TEC_COL      ; endereco do periferico das colunas
-    MOV  R4, DISPLAYS     ; endereco do periferico dos displays
-    MOV  R5, MASCARA      ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+
 
 
 ; **********************************************************************
 ; * Codigo
 ; **********************************************************************
 PLACE      0
+    MOV  R2, TEC_LIN      ; endereco do periferico das linhas
+    MOV  R3, TEC_COL      ; endereco do periferico das colunas
+    MOV  R4, DISPLAYS     ; endereco do periferico dos displays
+    MOV  R5, MASCARA      ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
-	MOV  SP, SP_inicial					; inicializa SP para a palavra a seguirà última da pilha
+
+
+
+	MOV  SP, SP_inicial	; inicializa SP para a palavra a seguirà última da pilha
     MOV  R7, 0          ; inicia o contador a zero
     MOVB [R4], R7       ; inicia o display com o valor do contador
 

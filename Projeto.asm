@@ -36,9 +36,9 @@ DISPLAYS  		EQU 0A000H	; endereco dos displays de 7 segmentos (periferico POUT-1
 TEC_LIN   		EQU 0C000H	; endereco das linhas do teclado (periferico POUT-2)
 TEC_COL   		EQU 0E000H	; endereco das colunas do teclado (periferico PIN)
 MASCARA   		EQU 0FH		; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-MIN_COLUNA		EQU  0		; número da coluna mais à esquerda que o objeto pode ocupar
-MAX_COLUNA		EQU  63		; número da coluna mais à direita que o objeto pode ocupar
-ATRASO			EQU	400H	; atraso para limitar a velocidade de movimento
+MIN_COLUNA		EQU 0		; número da coluna mais à esquerda que o objeto pode ocupar
+MAX_COLUNA		EQU 63		; número da coluna mais à direita que o objeto pode ocupar
+ATRASO			EQU	0FFFFH	; atraso para limitar a velocidade de movimento
 
 ; Teclado
 LINHA_LEITURA	EQU 16		; linha a testar (5a linha, 10000b), sendo que a sua primeira operação é SHR
@@ -76,7 +76,7 @@ ALTURA_R		EQU 5	; altura do rover
 LARGURA_R		EQU 5	; largura do rover
 
 ; Asteroide bom
-LINHA_AB		EQU 15  ; linha de começo do cover (a meio do ecrã))
+LINHA_AB		EQU 0  ; linha de começo do cover (a meio do ecrã))
 COLUNA_AB		EQU 30  ; coluna de começo do rover (a meio do ecrã)
 ALTURA_AB		EQU 5	; altura do rover
 LARGURA_AB		EQU 5	; largura do rover
@@ -160,8 +160,47 @@ inicio:
 	MOV	R7, 0							; valor a somar à coluna do boneco, para o movimentar
      
 comeco:
+	CALL	mexe_asteroide				; mexe o asteroide dado
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
+	CALL	atraso						; previne o computador
 	JMP	comeco							; vai desenhar o boneco de novo
+
+
+
+; **********************************************************************
+; MEXE_ASTEROIDE - Responsavel pelo movimento dos asteroides.
+;					?! EM CONSTRUÇÂO!?
+; Argumentos:   R4 - endereço dos asteroides
+;
+; **********************************************************************
+mexe_asteroide:
+	PUSH R0
+	PUSH R1
+	PUSH R2
+	PUSH R3
+	PUSH R5
+	PUSH R6
+	PUSH R7
+
+posição_asteroide_mao:
+	MOV	R4, DEF_ASTEROIDE_BOM			; endereço da tabela que define o boneco
+    MOV R1, [R4]						; linha do boneco
+	ADD R4, 2							; passa para a palavra seguinte (coluna)
+    MOV R2, [R4]						; coluna do boneco
+	ADD R4, 2							; passa para a palavra seguinte (altura)
+
+mostra_asteroide_mao:
+	CALL	desenha_boneco				; desenha o boneco a partir da tabela
+
+sai_mexe_asteroide:
+	POP R7
+	POP R6
+	POP R5
+	POP R3
+	POP R2
+	POP R1
+	POP R0
+	RET
 
 
 ; **********************************************************************
@@ -200,6 +239,8 @@ espera_input:							; neste ciclo espera-se até uma tecla ser premida
 	
 ve_limites:
 	CALL	testa_limites				; vê se chegou aos limites do ecrã e se sim força R7 a 0
+	CMP	R7, 0							; é para mexer o rover?
+	JZ sai_user_input					; se não, sai da função (se houver mais funções mete-las antes daqui)
 
 atrasa_rover:
 	CALL	atraso						; Se a figura estiver demasiado rápida alterem nas Constantes
@@ -215,6 +256,8 @@ atualiza_coordenadas:
 	ADD R4, 2							; passa para a palavra seguinte (coluna)
 	MOV [R4], R2						; atualiza a posição do rover na tabela
 
+
+sai_user_input:
 	POP R7
 	POP R6
 	POP R5
@@ -360,11 +403,11 @@ ciclo_atraso:
 
 
 ; **********************************************************************
-; DESENHA_BONECO - Desenha um boneco na linha e coluna indicadas
-;			    com a forma e cor definidas na tabela indicada.
+; DESENHA_BONECO - Desenha um boneco (especificar com R4) na linha e
+;			    coluna indicadas com a forma e cor definidas na tabela indicada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
-;               R4 - tabela que define o rover
+;               R4 - tabela que define o boneco a desenhar
 ;				R5 - contador de colunas
 ;				R6 - contador de linhas
 ;				R7 - guarda n colunas
