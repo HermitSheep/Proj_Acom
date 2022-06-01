@@ -46,23 +46,23 @@ CONTADOR_L  	EQU 4		; conta a linha que está a ser verificada, começa na 4 e v
 CONTADOR_C   	EQU 0		; conta os SHR precisos para a coluna passar a ser 0 (para converter para o valor certo)
 
 ; Funcões teclas  (PARA ADICIONAR NOVAS FUNÇOÕES, INSTRUÇÕES ESTÃO NA FUNÇÃO TECLADO)
-DIREITA      	EQU 0FH		; tecla para mexer o rover para a direita
-ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
+DIREITA      	EQU 0FH	
+ESQUERDA      	EQU 0EH		
 INCREMENTA_D    EQU 01H	    ; incrementa display
 DECREMENTA_D    EQU 00H     ; decrementa display
 
 ; Comandos media-center
-DEFINE_LINHA    		EQU 600AH	; endereço do comando para definir a linha em que escrever
-DEFINE_COLUNA   		EQU 600CH	; endereço do comando para definir a coluna em que escrever
-DEFINE_PIXEL    		EQU 6012H	; endereço do comando para definir a cor do pixel a escrever
+DEFINE_LINHA    		EQU 600AH	; endereço do comando para definir a linha
+DEFINE_COLUNA   		EQU 600CH	; endereço do comando para definir a coluna
+DEFINE_PIXEL    		EQU 6012H	; endereço do comando para escrever um pixel
 APAGA_AVISO     		EQU 6040H	; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRA		 		EQU 6002H	; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU 6042H	; endereço do comando para selecionar uma imagem de fundo
-INICIA_MUSICA			EQU	605AH	; endereço do comando começa uma musica, mas não em loop
-TOCA_MUSICA_LOOP		EQU	605CH	; endereço do comando toca musica em loop até ser parado
-PAUSA_MUSICA			EQU 605EH	; endereço do comando pausa o som selecionado
-CONTINUA_MUSICA			EQU 6060H	; endereço do comando continua musica selecionada de onde tinha sido pausada
-TERMINA_MUSICA			EQU 6066h	; endereço do comando termina a musica selecionada
+INICIA_MUSICA			EQU	605AH	; começa uma musica, mas não em loop
+TOCA_MUSICA_LOOP		EQU	605CH	; toca musica em loop até ser parado
+PAUSA_MUSICA			EQU 605EH	; pausa o som selecionado
+CONTINUA_MUSICA			EQU 6060H	; continua musica selecionada de onde tinha sido pausada
+TERMINA_MUSICA			EQU 6066h	; termina a musica selecionada
 
 ; Paleta de cores
 ENC		EQU	0FF00H	; cor pixel: vermelho (encarnado)
@@ -77,20 +77,20 @@ WHI		EQU 0FFFFH	; cor pixel: branco (white)
 TRA		EQU 00000H	; cor pixel: transparente
 
 ; Rover
-LINHA_R        	EQU 27	; linha de começo do rover (a meio do ecrã))
-COLUNA_R		EQU 30	; coluna de começo do rover (a meio do ecrã)
+LINHA_R        	EQU 27  ; linha de começo do rover (a meio do ecrã))
+COLUNA_R		EQU 30  ; coluna de começo do rover (a meio do ecrã)
 ALTURA_R		EQU 5	; altura do rover
 LARGURA_R		EQU 5	; largura do rover
 
 ; Asteroide bom
-LINHA_AB		EQU 0	; linha de começo do cover (a meio do ecrã))
+LINHA_AB		EQU 0  ; linha de começo do cover (a meio do ecrã))
 COLUNA_AB		EQU 30  ; coluna de começo do rover (a meio do ecrã)
 ALTURA_AB		EQU 5	; altura do rover
 LARGURA_AB		EQU 5	; largura do rover
 
 ; Asteroide mau
-LINHA_AM		EQU 15	; linha de começo do cover (a meio do ecrã))
-COLUNA_AM		EQU 30	; coluna de começo do rover (a meio do ecrã)
+LINHA_AM		EQU 15  ; linha de começo do cover (a meio do ecrã))
+COLUNA_AM		EQU 30  ; coluna de começo do rover (a meio do ecrã)
 ALTURA_AM		EQU 5	; altura do rover
 LARGURA_AM		EQU 5	; largura do rover
 
@@ -142,7 +142,8 @@ CONTADOR_DISPLAY:
 ; R2  --> endereço input teclado
 ; R3  --> endereço output teclado
 ; R4  --> endereço display
-; R5  --> mascara						(isolar os 4 bits da direita)
+; R5  --> mascara                              (isolar os 4 bits da direita)
+; R7  --> indicador movimento
 
 
 ; **********************************************************************
@@ -158,8 +159,8 @@ CONTADOR_DISPLAY:
 	MOV  SP, SP_inicial	 	; inicializa SP para a palavra a seguirà última da pilha
 
 ; Inicio programa
-    MOV  R7, 0       		; inicia o contador a zero
-    MOVB [R4], R7     		; inicia o display com o valor do contador
+    MOV  R7, 0       	; inicia o contador a zero
+    MOVB [R4], R7     	; inicia o display com o valor do contador
 
 inicio:
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
@@ -365,29 +366,29 @@ conta_colunas:
 
 ; Funções teclas
 funcoes_teclas:
-	MOV R6, DIREITA			; guarda a tecla A (para o CMP funcionar)
-    CMP R9, R6				; A foi primida?
-    JZ  direita				; vai para o incrementa
-    MOV R6, ESQUERDA		; guarda a tecla B (para o CMP funcionar)
-    CMP R9, R6 				; B foi primida?
-    JZ  esquerda			; vai para o decrementa
+	MOV R6, DIREITA		; guarda a tecla A (para o CMP funcionar)
+    CMP R9, R6			; A foi primida?
+    JZ  direita			; vai para o incrementa
+    MOV R6, ESQUERDA	; guarda a tecla B (para o CMP funcionar)
+    CMP R9, R6 			; B foi primida?
+    JZ  esquerda		; vai para o decrementa
 	MOV R6, INCREMENTA_D	; guarda a tecla B (para o CMP funcionar)
-    CMP R9, R6 				; B foi primida?
+    CMP R9, R6 			; B foi primida?
     JZ  incrementa_d		; vai para o decrementa
 	MOV R6, DECREMENTA_D	; guarda a tecla B (para o CMP funcionar)
-    CMP R9, R6 				; B foi primida?
+    CMP R9, R6 			; B foi primida?
     JZ  decrementa_d		; vai para o decrementa
 
 
-	JMP fim_teclado			; se não for nenhuma das duas acaba a função
+	JMP fim_teclado		; se não for nenhuma das duas acaba a função
 
 direita:
-    MOV R7, +1       		; incrementa o contador
-	JMP fim_teclado			; acaba a função
+    MOV R7, +1       	; incrementa o contador
+	JMP fim_teclado		; acaba a função
 
 esquerda:
-    MOV R7, -1      		; decrementa o contador
-	JMP fim_teclado			; acaba a função
+    MOV R7, -1      	; decrementa o contador
+	JMP fim_teclado		; acaba a função
 
 incrementa_d:
 	MOV R6, DISPLAYS
@@ -406,14 +407,14 @@ decrementa_d:
 	JMP ha_tecla
 
 ha_tecla:
-    MOVB [R2], R1    		; escrever no periferico de saida (linhas)
-    MOVB R0, [R3]    		; ler do periferico de entrada (colunas)
-    AND  R0, R5      		; elimina bits para alem dos bits 0-3
-    CMP  R0, R8      		; a mesma tecla está premida?
-    JZ  ha_tecla	  		; se sim salta vola a verificar
+    MOVB [R2], R1    	; escrever no periferico de saida (linhas)
+    MOVB R0, [R3]    	; ler do periferico de entrada (colunas)
+    AND  R0, R5      	; elimina bits para alem dos bits 0-3
+    CMP  R0, R8      	; a mesma tecla está premida?
+    JZ  ha_tecla	  	; se sim salta vola a verificar
 
 fim_teclado:
-	POP		R11				; Recuperar os registos guardados
+	POP		R11			; Recuperar os registos guardados
 	POP		R10
 	POP		R9
 	POP		R8
