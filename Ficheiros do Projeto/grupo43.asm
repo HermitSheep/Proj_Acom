@@ -252,6 +252,27 @@ sai_mexe_asteroide:
 	POP R0
 	RET
 
+; **********************************************************************
+; RANDOMIZER - Gera um numero aleatório entre 0 e 7.
+;
+; Retorna:	R10 --> número aleatório entre 0 e 7
+;
+; **********************************************************************
+randomizer:
+	PUSH R1
+	PUSH R2
+	PUSH R3
+
+    MOV	R2, TEC_LIN   		; endereco do teclado (para perguntar a uma linha se tem tecla)
+    MOV	R3, TEC_COL   		; endereco do teclado (para receber resposta)
+    MOVB [R2], R1			; pergunta à linha se tem tecla primida
+    MOVB R10, [R3]       	; recebe resposta
+	SHR R10, 5				; isola os 3 bits da direita
+
+	POP R3
+	POP R2
+	POP R1
+	RET
 
 ; **********************************************************************
 ; USER_INPUT - Trata de tudo o que envolva user input.
@@ -333,10 +354,8 @@ sai_user_input:
 ;				3-Criar u salto para onde fará a função da tecla
 ;				4-Se for para movimento continuo, saltar para fim_teclado:, se for
 ;					para fazer a ação uma só vez, saltar para ha_tecla
-
-; Argumentos:
 ;
-; Retorna:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
+; Argumentos:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
 ;
 ; **********************************************************************
 teclado:
