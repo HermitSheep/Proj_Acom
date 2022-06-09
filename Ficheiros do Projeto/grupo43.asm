@@ -253,6 +253,28 @@ sai_mexe_asteroide:
 	RET
 
 ; **********************************************************************
+; ESCOLHE_COLUNA - Converte um numero 0 - 7 na coluna correspondente.
+;
+; Argumento:	R10 - numero 0 - 7
+; Retorna:		R11 - numero da coluna correspondete
+;
+; **********************************************************************
+	PUSH	R10
+
+escolhe_coluna:
+	MOV R11, 0
+converte_para_coluna:
+	CMP R10, 0
+	JZ sai_escolhe_coluna
+	ADD R11, 8
+	SUB R10, 1
+	JMP converte_para_coluna	; converte o numero num multiplo de 8 (começando por 0)
+
+	sai_escolhe_coluna:
+	POP	R10
+	RET
+
+; **********************************************************************
 ; RANDOMIZER - Gera um numero aleatório entre 0 e 7.
 ;
 ; Retorna:	R10 --> número aleatório entre 0 e 7
@@ -355,7 +377,7 @@ sai_user_input:
 ;				4-Se for para movimento continuo, saltar para fim_teclado:, se for
 ;					para fazer a ação uma só vez, saltar para ha_tecla
 ;
-; Argumentos:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
+; Argumento:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
 ;
 ; **********************************************************************
 teclado:
@@ -546,7 +568,7 @@ escreve_pixel:
 ; **********************************************************************
 ; TESTA_LIMITES - Testa se o boneco chegou aos limites do ecrã e nesse caso
 ;			   impede o movimento (força R7 a 0)
-; Argumentos:	R7 - 0 se já tiver chegado ao limite, inalterado caso contrário
+; Argumento:	R7 - 0 se já tiver chegado ao limite, inalterado caso contrário
 ; **********************************************************************
 testa_limites:
 	PUSH	R2
