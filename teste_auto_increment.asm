@@ -48,25 +48,23 @@ CONTADOR_C   	EQU 0		; conta os SHR precisos para a coluna passar a ser 0 (para 
 ; Funcões teclas  (PARA ADICIONAR NOVAS FUNÇOÕES, INSTRUÇÕES ESTÃO NA FUNÇÃO TECLADO)
 DIREITA      	EQU 0FH		; tecla para mexer o rover para a direita
 ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
-INCREMENTA_D    EQU 1H	    ; incrementa display
-DECREMENTA_D    EQU 0H		; decrementa display
-APAGA_TUDO		EQU	2H		; apaga todos os ecrãs
-APAGA_ASTEROIDE	EQU	3H		; apaga ecrã asteroides
+INCREMENTA_D    EQU 01H	    ; incrementa display
+DECREMENTA_D    EQU 00H     ; decrementa display
 
 ; Comandos media-center
-SELECIONA_ECRA			EQU	6004H	; seleciona ecrã em que escrever
-DEFINE_LINHA    		EQU 600AH	; define a linha em que escrever
-DEFINE_COLUNA   		EQU 600CH	; define a coluna em que escrever
-DEFINE_PIXEL    		EQU 6012H	; define a cor do pixel a escrever
-APAGA_AVISO     		EQU 6040H	; apaga o aviso de nenhum cenário selecionado
-APAGA_ECRA		 		EQU 6000H	; apaga o ecrã selecionado
-APAGA_TODOS_ECRANS		EQU 6002H	; apaga todos os ecrãs
-SELECIONA_CENARIO_FUNDO EQU 6042H	; seleciona uma imagem de fundo
-INICIA_MUSICA			EQU	605AH	; começa uma musica, mas não em loop
-TOCA_MUSICA_LOOP		EQU	605CH	; toca musica em loop até ser parado
-PAUSA_MUSICA			EQU 605EH	; pausa o som selecionado
-CONTINUA_MUSICA			EQU 6060H	; continua musica selecionada de onde tinha sido pausada
-TERMINA_MUSICA			EQU 6066h	; termina a musica selecionada
+DEFINE_LINHA    		EQU 600AH	; endereço do comando para definir a linha em que escrever
+DEFINE_COLUNA   		EQU 600CH	; endereço do comando para definir a coluna em que escrever
+DEFINE_PIXEL    		EQU 6012H	; endereço do comando para definir a cor do pixel a escrever
+APAGA_AVISO     		EQU 6040H	; endereço do comando para apagar o aviso de nenhum cenário selecionado
+APAGA_ECRA		 		EQU 6002H	; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_CENARIO_FUNDO EQU 6042H	; endereço do comando para selecionar uma imagem de fundo
+INICIA_MUSICA			EQU	605AH	; endereço do comando começa uma musica, mas não em loop
+TOCA_MUSICA_LOOP		EQU	605CH	; endereço do comando toca musica em loop até ser parado
+PAUSA_MUSICA			EQU 605EH	; endereço do comando pausa o som selecionado
+CONTINUA_MUSICA			EQU 6060H	; endereço do comando continua musica selecionada de onde tinha sido pausada
+TERMINA_MUSICA			EQU 6066h	; endereço do comando termina a musica selecionada
+
+AUTO_INCREMENT			EQU	6010
 
 ; Paleta de cores
 ENC		EQU	0FF00H	; cor pixel: vermelho (encarnado)
@@ -168,9 +166,9 @@ CONTADOR_DISPLAY:
 inicio:
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV [APAGA_ECRA], R1				; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-	MOV	R1, 0							; cenário de fundo número 0
+	MOV	R1, 1							; cenário de fundo número 0
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
-	MOV R1, 0							; seleciona a musica de fundo
+	MOV R1, 1							; seleciona a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
      
@@ -196,8 +194,6 @@ mexe_asteroide:
 	PUSH R5
 	PUSH R6
 	PUSH R7
-	PUSH R9
-	PUSH R10
 
 posição_asteroide_mau:
 	MOV	R4, DEF_ASTEROIDE_BOM			; endereço da tabela que define o boneco
@@ -207,14 +203,9 @@ posição_asteroide_mau:
 	ADD R4, 2							; passa para a palavra seguinte (altura)
 
 mostra_asteroide_mau:
-	MOV R10, 1							; escolhe o 2º ecrã
-	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
 
 sai_mexe_asteroide:
-
-	POP R10
-	POP R9
 	POP R7
 	POP R6
 	POP R5
@@ -246,9 +237,6 @@ user_input:
 	PUSH R6
 	PUSH R7
 	PUSH R8
-	PUSH R9
-	PUSH R10
-
 mexe_rover:								; mexe o rover de acordo com o input
 posição_boneco:
 	MOV	R4, DEF_ROVER					; endereço da tabela que define o boneco
@@ -258,8 +246,6 @@ posição_boneco:
 	ADD R4, 2							; passa para a palavra seguinte (altura)
 
 mostra_boneco:
-	MOV R10, 0							; escolhe o 1º ecrã
-	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
 
 espera_input:							; neste ciclo espera-se até uma tecla ser premida
@@ -270,15 +256,14 @@ ve_limites:
 	CALL	testa_limites				; vê se chegou aos limites do ecrã e se sim força R7 a 0
 	CMP	R7, 0							; é para mexer o rover?
 	JZ sai_user_input					; se não, sai da função (se houver mais funções mete-las antes daqui)
-	MOV R8, 1							; seleciona o som 3 (para o movimento do rover)
+	MOV R8, 0							; seleciona o som 3 (para o movimento do rover)
 	MOV [INICIA_MUSICA], R8				; toca o som uma vez
 
 atrasa_rover:
 	CALL	atraso						; Se a figura estiver demasiado rápida alterem nas Constantes
 
 move_boneco:
-	MOV [APAGA_ECRA], R10				; apaga o 1º ecrã
-	;CALL	apaga_boneco				; apaga o boneco na sua posição corrente
+	CALL	apaga_boneco				; apaga o boneco na sua posição corrente
 	
 coluna_seguinte:
 	ADD	R2, R7							; para desenhar objeto na coluna seguinte (direita ou esquerda)
@@ -290,9 +275,6 @@ atualiza_coordenadas:
 
 
 sai_user_input:
-
-	POP R10
-	POP R9
 	POP R8
 	POP R7
 	POP R6
@@ -317,7 +299,7 @@ sai_user_input:
 ;				3-Criar u salto para onde fará a função da tecla
 ;				4-Se for para movimento continuo, saltar para fim_teclado:, se for
 ;					para fazer a ação uma só vez, saltar para ha_tecla
-
+;
 ; Argumentos:   R0  --> output do teclado                    (colunas)
 ; 				R1  --> input do teclado                     (linhas)
 ; 				R2  --> endereço das linhas do teclado
@@ -388,26 +370,15 @@ funcoes_teclas:
 	MOV R6, DIREITA			; guarda a tecla A (para o CMP funcionar)
     CMP R9, R6				; A foi primida?
     JZ  direita				; vai para o incrementa
-
     MOV R6, ESQUERDA		; guarda a tecla B (para o CMP funcionar)
     CMP R9, R6 				; B foi primida?
     JZ  esquerda			; vai para o decrementa
-
 	MOV R6, INCREMENTA_D	; guarda a tecla B (para o CMP funcionar)
     CMP R9, R6 				; B foi primida?
     JZ  incrementa_d		; vai para o decrementa
-
 	MOV R6, DECREMENTA_D	; guarda a tecla B (para o CMP funcionar)
     CMP R9, R6 				; B foi primida?
     JZ  decrementa_d		; vai para o decrementa
-
-	MOV R6, APAGA_TUDO		; guarda a tecla B (para o CMP funcionar)
-    CMP R9, R6 				; B foi primida?
-    JZ  apaga_todos			; vai para o decrementa
-
-	MOV R6, APAGA_ASTEROIDE		; apaga o ecrã do rover
-    CMP R9, R6 				; B foi primida?
-    JZ  apaga_ecran_rover	; vai para o decrementa
 
 
 	JMP fim_teclado			; se não for nenhuma das duas acaba a função
@@ -421,27 +392,20 @@ esquerda:
 	JMP fim_teclado			; acaba a função
 
 incrementa_d:
+	MOV R6, DISPLAYS
 	MOV R4, [CONTADOR_DISPLAY]
 	ADD R4, +1
-	MOV [DISPLAYS], R4
+	MOV [R6], R4
 	MOV [CONTADOR_DISPLAY], R4
 	JMP ha_tecla
 
 decrementa_d:
+	MOV R6, DISPLAYS
 	MOV R4, [CONTADOR_DISPLAY]
 	ADD R4, -1
-	MOV [DISPLAYS], R4
+	MOV [R6], R4
 	MOV [CONTADOR_DISPLAY], R4
 	JMP ha_tecla
-
-apaga_todos:
-	MOV [APAGA_TODOS_ECRANS], R9; apaga todos os ecrãs
-	JMP fim_teclado
-
-apaga_ecran_rover:
-	MOV R9, 1
-	MOV [APAGA_ECRA], R9
-	JMP fim_teclado
 
 ha_tecla:
     MOVB [R2], R1    		; escrever no periferico de saida (linhas)
@@ -490,7 +454,6 @@ ciclo_atraso:
 ;				R5 - contador de colunas
 ;				R6 - contador de linhas
 ;				R7 - guarda n colunas
-;				R8 - especifica ecrã
 ;
 ; **********************************************************************
 desenha_boneco:
@@ -501,7 +464,6 @@ desenha_boneco:
 	PUSH	R5
 	PUSH    R6
 	PUSH	R7
-	push	R8
 	
 	MOV	R6, [R4]			; obtém a altura do boneco (n linhas)
 	ADD	R4, 2				; endereço da largura
@@ -522,7 +484,6 @@ desenha_linhas:				; desenha os pixels desta linha do rover
 	SUB R6, 1				; menos uma linha para tratar
 	JNZ	desenha_colunas
 
-	POP R8
 	POP R7
 	POP R6
 	POP	R5
@@ -585,11 +546,9 @@ apaga_linhas:				; apaga os pixels desta linha do rover
 ;
 ; **********************************************************************
 escreve_pixel:
-
 	MOV  [DEFINE_LINHA],  R1	; seleciona a linha
 	MOV  [DEFINE_COLUNA], R2	; seleciona a coluna
 	MOV  [DEFINE_PIXEL],  R3	; altera a cor do pixel na linha e coluna já selecionadas
-
 	RET
 
 
