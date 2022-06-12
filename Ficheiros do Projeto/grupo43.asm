@@ -216,11 +216,11 @@ inicio:
 	;EI1
 	;EI2					; (isto tem de estar depois de os asteroides serem carregados)
 	;EI3
-	;EI						; permite interrupções (geral)
+	EI						; permite interrupções (geral)
 
 comeco:
-	;CALL	user_input					; faz tudo o que tem a haver com input de utilizador
-	;CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
+	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
+	CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
 	JMP	comeco							; repete
 
 int_1:
@@ -308,6 +308,7 @@ sequencia_bom:
 
 reset_contador:
 	ADD R4, 2
+	MOV R6, 0
 	MOV [R4], R6						; reset contador
 
 	SUB R4, 6
@@ -334,15 +335,17 @@ mexe_asteroide:
 	MOV R3, [R4]				; --> linhas
 	MOV R2, 16
 	CMP R3, R2
-	JGE desce_astro				; se já estiver na faze final apenas mexe para baixo
+	JGE desenha_astro			; se já estiver na faze final apenas mexe para baixo
 	MOV R2, 33
 	CMP R3, R2
 	JZ re_carrega_astro			; se estiver já fora do ecrã recarrega o asteroide
-	ADD R4, 6					; --> contador de faze
-	MOV R3, [R4]
-	CMP R3, 3
-	JNZ desce_astro				; mexe o asteroide se ainda não tiver de mudar de faze
+	ADD R4, 6
+	MOV R3, [R4]				; --> contador de faze
+	SUB R4, 6
+	CMP R3, 4						; mudar aqui para mudar a altura em que eles mudam de faze
+	JNZ desenha_astro			; mexe o asteroide se ainda não tiver de mudar de faze
 ; próxima faze
+	ADD R4, 6
 	MOV R3, 0
 	MOV [R4], R3				; contador --> 0
 	SUB R4, 2
@@ -356,16 +359,18 @@ re_carrega_astro:
 	CALL	carrega_asteroide
 	JMP fim_mexe_asteroides		; carrega o asteroide no inicio e sai da função
 
-desce_astro:
-	SUB R4, 6					; --> linhas
-
 desenha_astro:
 	MOV R3, [R4]
 	ADD R3, 1
 	MOV [R4], R3				; próxima linha
-	MOV R2, 33
+	MOV R2, 32
 	CMP R3, R2
 	JZ re_carrega_astro			; se estiver já fora do ecrã recarrega o asteroide
+	ADD R4, 6
+	MOV R3, [R4]
+	ADD R3, 1
+	MOV [R4], R3				; incrementa o contador
+	SUB R4, 6
 	CALL desenha_asteroide
 	
 fim_mexe_asteroides:
