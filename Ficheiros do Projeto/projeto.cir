@@ -14,8 +14,8 @@
     "Y absolute" : 0,
     "X relative" : 0,
     "Y relative" : 0,
-    "width" : 1920,
-    "height" : 1080,
+    "width" : 1600,
+    "height" : 873,
     "leftRightDividerLocation" : 247,
     "topBottomDividerLocation" : 643
   },
@@ -710,18 +710,18 @@
     } ]
   }, {
     "className" : "Connection",
-    "elementID" : 110,
-    "name" : "Connection_ID:110",
+    "elementID" : 111,
+    "name" : "Connection_ID:111",
     "numberOfBits" : 1,
     "segments" : [ {
       "sourcePinID" : 109,
-      "targetPinID" : 7,
+      "targetPinID" : 5,
       "points" : [ {
-        "X" : 170,
-        "Y" : 36
+        "X" : 164,
+        "Y" : 268
       }, {
         "X" : 211,
-        "Y" : 121
+        "Y" : 185
       } ]
     } ]
   } ],
@@ -734,8 +734,8 @@
     "positionX" : 215,
     "positionY" : 93,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1061,
-    "simGuiYRelative" : 193,
+    "simGuiXRelative" : 2,
+    "simGuiYRelative" : 32,
     "simGuiWidth" : 859,
     "simGuiHeight" : 811,
     "clockPeriod" : 200,
@@ -751,7 +751,7 @@
       "connStartBit" : 0,
       "pinSide" : "LEFT",
       "pinShape" : "RECT",
-      "pinConnectionID" : 110,
+      "pinConnectionID" : -1,
       "pinValueFixed" : "-"
     },
     "resetPin" : {
@@ -766,7 +766,7 @@
       "pinConnectionID" : -1,
       "pinValueFixed" : "1"
     },
-    "programFilePathName" : "Projeto.asm",
+    "programFilePathName" : "grupo43.asm",
     "nTabSpaces" : 4,
     "bus interface" : {
       "className" : "ModuleExtensionMasterBusReadWrite",
@@ -923,8 +923,8 @@
       "connStartBit" : 0,
       "pinSide" : "LEFT",
       "pinShape" : "RECT",
-      "pinConnectionID" : -1,
-      "pinValueFixed" : "0"
+      "pinConnectionID" : 111,
+      "pinValueFixed" : "-"
     } ],
     "intAckPin" : {
       "className" : "OutPin",
@@ -1448,8 +1448,8 @@
     "positionX" : 815,
     "positionY" : 507,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1790,
-    "simGuiYRelative" : 147,
+    "simGuiXRelative" : 962,
+    "simGuiYRelative" : 253,
     "simGuiWidth" : 130,
     "simGuiHeight" : 163,
     "columns" : 4,
@@ -1491,8 +1491,8 @@
     "positionX" : 855,
     "positionY" : 387,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1704,
-    "simGuiYRelative" : 131,
+    "simGuiXRelative" : 1168,
+    "simGuiYRelative" : 235,
     "simGuiWidth" : 216,
     "simGuiHeight" : 186,
     "nHexaDigits" : 3,
@@ -1519,8 +1519,8 @@
     "positionX" : 675,
     "positionY" : 247,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1067,
-    "simGuiYRelative" : 572,
+    "simGuiXRelative" : 747,
+    "simGuiYRelative" : 473,
     "simGuiWidth" : 853,
     "simGuiHeight" : 427,
     "columnAddressNBits" : 6,
@@ -1723,11 +1723,11 @@
   }, {
     "className" : "ModuleRealTimeClock",
     "elementID" : 108,
-    "name" : "Real-time clock",
+    "name" : "Relógio asteroides 2",
     "numberOfBits" : 1,
     "moduleDelay" : 5,
-    "positionX" : 56,
-    "positionY" : 24,
+    "positionX" : 24,
+    "positionY" : 256,
     "simGuiVisibleInSimulation" : false,
     "clockPeriod" : 100,
     "startAutomatically" : true,
@@ -1741,7 +1741,7 @@
       "connStartBit" : 0,
       "pinSide" : "RIGHT",
       "pinShape" : "RECT",
-      "pinConnectionID" : 110
+      "pinConnectionID" : 111
     }
   } ]
 }

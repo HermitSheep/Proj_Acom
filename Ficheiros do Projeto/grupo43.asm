@@ -59,7 +59,7 @@ VER2	EQU 0F8C0H	; verde escuro
 AZU1	EQU 0F0FFH	; azul claro
 AZU2	EQU 0F00FH	; azul escuro
 ROX		EQU 0FF0FH	; roxo
-CIN1	EQU 05777H	; cinzento longe
+CIN1	EQU 07777H	; cinzento longe
 CIN2	EQU 0FAAAH	; cinzento normal
 WHI		EQU 0FFFFH	; branco (white)
 TRA		EQU 00000H	; transparente
@@ -72,6 +72,8 @@ LARGURA_R		EQU 5	; largura
 
 ; Asteroides
 CONT_FAZE	EQU 0	; conta quantos movimentos fez desde que entrou na faze
+LINHA_A		EQU -1
+COLUNA_A	EQU 30
 
 
 ; *********************************************************************************
@@ -83,10 +85,10 @@ pilha:
 
 SP_inicial:				; primeira posição da stack
 tab:
-	WORD int_0			; rotinas de atendimento da interrupção 0 - 3
-	WORD int_1
-	WORD int_2
-	WORD int_3
+	WORD	int_0		; rotinas de atendimento da interrupção 0 - 3
+	WORD	int_1
+	WORD	int_2
+	WORD	int_3
 							
 DEF_ROVER:												; lista que define o rover (posição, tamanho e desenho):
 	WORD		LINHA_R, COLUNA_R, ALTURA_R, LARGURA_R	; para ler a informação seguinte é priciso incrementar
@@ -98,16 +100,16 @@ DEF_ROVER:												; lista que define o rover (posição, tamanho e desenho):
 	WORD		TRA,  AMA,  AZU1, AMA,  TRA
 
 ASTEROIDE_1:
-	WORD		AST_FAZE_1, CONT_FAZE
+	WORD		LINHA_A, COLUNA_A, SEQUENCIA_AST_MAU, CONT_FAZE	; posição do asteroide, sequencia desenho, contador
 
 ASTEROIDE_2:
-	WORD		AST_FAZE_1, CONT_FAZE
+	WORD		LINHA_R, COLUNA_R, SEQUENCIA_AST_MAU, CONT_FAZE	; de movimento desd'a ultima faze
 
 ASTEROIDE_3:
-	WORD		AST_FAZE_1, CONT_FAZE
+	WORD		LINHA_R, COLUNA_R, SEQUENCIA_AST_MAU, CONT_FAZE
 
 ASTEROIDE_4:
-	WORD		AST_FAZE_1, CONT_FAZE
+	WORD		LINHA_R, COLUNA_R, SEQUENCIA_AST_MAU, CONT_FAZE
 
 
 AST_FAZE_1:								; tabela de desenhos dos asteroides
@@ -169,6 +171,12 @@ AST_FAZE_5_MAU:
 	WORD		ENC, AMA, ENC,  AMA, ENC
 	WORD		ENC, TRA, TRA,  TRA, ENC
 
+SEQUENCIA_AST_BOM:
+	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_BOM, AST_FAZE_4_BOM, AST_FAZE_5_BOM
+
+SEQUENCIA_AST_MAU:
+	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_MAU, AST_FAZE_4_MAU, AST_FAZE_5_MAU
+
 CONTADOR_DISPLAY:
 	WORD		0			;Numero que entra no display
 
@@ -183,104 +191,228 @@ CONTADOR_DISPLAY:
 	MOV  SP, SP_inicial	 	; inicializa SP para a palavra a seguir à última da pilha
 	MOV  BTE, tab			; inicializa BTE
 
-	EI0						; permite interrupções 0 - 3
-	EI1
-	EI2
-	EI3
-	EI						; permite interrupções (geral)
-
 ; Inicio programa
     MOV  R7, 0       		; inicia o contador a zero
     MOV [DISPLAYS], R7     	; inicia o display com o valor do contador
 
 inicio:
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado
-    MOV [APAGA_ECRA], R1				; apaga todos os pixels já desenhados
+    MOV [APAGA_TODOS_ECRANS], R1				; apaga todos os pixels já desenhados
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
-     
+	MOV R4, ASTEROIDE_1
+	CALL	carrega_asteroide
+	MOV R4, ASTEROIDE_2
+	CALL	carrega_asteroide
+	MOV R4, ASTEROIDE_3
+	CALL	carrega_asteroide
+	MOV R4, ASTEROIDE_4
+	CALL	carrega_asteroide			; carrega os asteroides
+
+	EI0						; permite interrupções 0 - 3
+	;EI1
+	;EI2					; (isto tem de estar depois de os asteroides serem carregados)
+	;EI3
+	;EI						; permite interrupções (geral)
+
 comeco:
-	CALL	mexe_asteroide				; mexe os asteroides
-	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
-	CALL	atraso						; previne o computador l  	a Ga	rrrrrrr	rR
+	;CALL	user_input					; faz tudo o que tem a haver com input de utilizador
+	;CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
 	JMP	comeco							; repete
 
+int_1:
+int_2:
+int_3:
+
+; **********************************************************************
+; ASTEROIDES - Controla automáticamente os asteroides.
+;
+; Argumentos: R4 - Asteroide a ser mexido
+;
+; **********************************************************************
+int_0:
+	DI
+	PUSH	R1
+	PUSH	R4
+
+	MOV R1, 1
+	MOV [APAGA_ECRA], R1	; Apaga os asteroides
+	MOV R4, ASTEROIDE_1
+	CALL	mexe_asteroide
+	MOV R4, ASTEROIDE_2
+	CALL	mexe_asteroide
+	MOV R4, ASTEROIDE_3
+	CALL	mexe_asteroide
+	MOV R4, ASTEROIDE_4
+	CALL	mexe_asteroide
+
+	POP	R4
+	POP	R1
+	EI
+	RFE
 
 
 ; **********************************************************************
-; MEXE_ASTEROIDE - Responsavel pelo movimento dos asteroides.
+; CARREGA_ASTEROIDE - Carrega o asteroide numa posição aleatória.
+;
+; Argumentos: R4 - Asteroide a ser mexido
+;
+; **********************************************************************
+carrega_asteroide:
+	PUSH	R4
+	PUSH	R5
+	PUSH	R6
+	PUSH	R10
+	PUSH	R11
+
+	MOV R5, 0
+	MOV [R4], R5					; reset linha
+roll_the_dice:
+	CALL	dice_roll
+	MOV R5, ASTEROIDE_1
+	ADD R5, 2
+	MOV R6, [R5]
+	CMP R6, R10
+	JZ roll_the_dice
+	MOV R5, ASTEROIDE_2
+	ADD R5, 2
+	MOV R6, [R5]
+	CMP R6, R10
+	JZ roll_the_dice
+	MOV R5, ASTEROIDE_3
+	ADD R5, 2
+	MOV R6, [R5]
+	CMP R6, R10
+	JZ roll_the_dice
+	MOV R5, ASTEROIDE_4
+	ADD R5, 2
+	MOV R6, [R5]
+	CMP R6, R10
+	JZ roll_the_dice				; guarante que não mete o asteroide repetido
+
+	ADD R4, 2
+	MOV [R4], R10					; reset coluna
+	ADD R4, 2
+	CMP R11, 1
+	JZ sequencia_bom				; reset tipo e desenho
+	MOV R5, SEQUENCIA_AST_MAU
+	MOV [R4], R5
+	JMP reset_contador
+
+sequencia_bom:
+	MOV R5, SEQUENCIA_AST_BOM
+	MOV [R4], R5
+
+reset_contador:
+	ADD R4, 2
+	MOV [R4], R6						; reset contador
+
+	SUB R4, 6
+	CALL desenha_asteroide
+
+	POP	R11
+	POP	R10
+	POP	R6
+	POP	R5
+	POP	R4
+	RET
+
+; **********************************************************************
+; MEXE_ASTEROIDE - Desenha o asteroide especificado na próxima posição.
+;					É aconsenhavel apagar o ecrã 1 antes de fazer esta função.
+; Argumentos: R4 - Asteroide a ser mexido
 ;
 ; **********************************************************************
 mexe_asteroide:
-	PUSH R0
+	PUSH	R4
+	PUSH	R3
+	PUSH	R2
+
+	MOV R3, [R4]				; --> linhas
+	MOV R2, 16
+	CMP R3, R2
+	JGE desce_astro				; se já estiver na faze final apenas mexe para baixo
+	MOV R2, 33
+	CMP R3, R2
+	JZ re_carrega_astro			; se estiver já fora do ecrã recarrega o asteroide
+	ADD R4, 6					; --> contador de faze
+	MOV R3, [R4]
+	CMP R3, 3
+	JNZ desce_astro				; mexe o asteroide se ainda não tiver de mudar de faze
+; próxima faze
+	MOV R3, 0
+	MOV [R4], R3				; contador --> 0
+	SUB R4, 2
+	MOV R3, [R4]
+	ADD R3, 2
+	MOV [R4], R3				; próximo desenho
+	SUB R4, 4					; --> linhas
+	JMP desenha_astro
+
+re_carrega_astro:
+	CALL	carrega_asteroide
+	JMP fim_mexe_asteroides		; carrega o asteroide no inicio e sai da função
+
+desce_astro:
+	SUB R4, 6					; --> linhas
+
+desenha_astro:
+	MOV R3, [R4]
+	ADD R3, 1
+	MOV [R4], R3				; próxima linha
+	MOV R2, 33
+	CMP R3, R2
+	JZ re_carrega_astro			; se estiver já fora do ecrã recarrega o asteroide
+	CALL desenha_asteroide
+	
+fim_mexe_asteroides:
+	POP R2
+	POP	R3
+	POP	R4
+	RET
+
+; **********************************************************************
+; DESENHA_ASTEROIDE - Desenha o asteroide dado na sua posição atual.
+;
+; Argumentos: R4 - Asteroide a ser desenhado
+;
+; **********************************************************************
+desenha_asteroide:
 	PUSH R1
 	PUSH R2
-	PUSH R3
 	PUSH R4
-	PUSH R5
-	PUSH R6
-	PUSH R7
-	PUSH R9
 	PUSH R10
 
-posição_asteroide_mau:
-	MOV	R4, DEF_ASTEROIDE_BOM			; endereço da tabela que define o boneco
-    MOV R1, [R4]						; linha do boneco
-	ADD R4, 2							; passa para a palavra seguinte (coluna)
-    MOV R2, [R4]						; coluna do boneco
-	ADD R4, 2							; passa para a palavra seguinte (altura)
+posição_asteroide:
+    MOV R1, [R4]						; linha do asteroide
+	ADD R4, 2
+    MOV R2, [R4]						; coluna do asteroide
+	ADD R4, 2							; passa para a palavra seguinte (sequencia)
+	MOV R4, [R4]
+	MOV R4, [R4]						; desenho do asteroide
 
-mostra_asteroide_mau:
+mostra_asteroide:
 	MOV R10, 1							; escolhe o 2º ecrã
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
 
-sai_mexe_asteroide:
-
 	POP R10
-	POP R9
-	POP R7
-	POP R6
-	POP R5
 	POP R4
-	POP R3
 	POP R2
 	POP R1
-	POP R0
 	RET
 
 ; **********************************************************************
-; ESCOLHE_COLUNA - Converte um numero 0 - 7 na coluna correspondente.
+; DICE_ROLL - Escolhe aleatóriamente o tipo de asteroide e a sua coluna.
 ;
-; Argumento:	R10 - numero 0 - 7
-; Retorna:		R11 - numero da coluna correspondete
-;
-; **********************************************************************
-	PUSH	R10
-
-escolhe_coluna:
-	MOV R11, 0
-converte_para_coluna:
-	CMP R10, 0
-	JZ sai_escolhe_coluna
-	ADD R11, 8
-	SUB R10, 1
-	JMP converte_para_coluna	; converte o numero num multiplo de 8 (começando por 0)
-
-	sai_escolhe_coluna:
-	POP	R10
-	RET
-
-; **********************************************************************
-; RANDOMIZER - Gera um numero aleatório entre 0 e 7.
-;
-; Retorna:	R10 --> número aleatório entre 0 e 7
+; Retorna:	R10 --> numero da coluna correspondete
+;			R11 --> 1 - é bom, 0 - é mau
 ;
 ; **********************************************************************
-randomizer:
+dice_roll:
 	PUSH R1
 	PUSH R2
 	PUSH R3
@@ -290,6 +422,18 @@ randomizer:
     MOVB [R2], R1			; pergunta à linha se tem tecla primida
     MOVB R10, [R3]       	; recebe resposta
 	SHR R10, 5				; isola os 3 bits da direita
+	MOV R11, 0
+	CMP R10, 5
+	JZ e_bom
+	CMP R10, 3
+	JZ e_bom
+	JMP fim_dice_roll
+
+e_bom:
+	MOV R11, 1				; se sair 6 ou 4 o asteroide é bom, se não é mau
+
+fim_dice_roll:
+	SHL R10, 3				; converte num multiplo de 8 (coluna correspondente)
 
 	POP R3
 	POP R2
@@ -424,28 +568,27 @@ conta_colunas:
     CMP  R11, 0
     JNZ  conta_colunas  	; conta o numero de SHR até passar a 0
     SUB  R6,  1          	; corrige o acrescimo inicial do contador
-    MOV  R11, R6        	; guarda a coluna convertida
 
                         	; Converte coluna/linha --> tecla
     SHL  R10, 2         	; multiplica linha por 4 e adiciona a coluna
-    MOV  R9, R10        	; guarda o valor da tecla no R9
+    ADD  R10, R6
 
 ; Funções teclas
 funcoes_teclas:
 	MOV R6, DIREITA
-    CMP R9, R6
-    JZ  Direita				; se DIREITA foi primida vai para Direita
+    CMP R10, R6
+    JZ  direita				; se DIREITA foi primida vai para Direita
 
     MOV R6, ESQUERDA
-    CMP R9, R6
+    CMP R10, R6
     JZ  esquerda
 
 	MOV R6, INCREMENTA_D
-    CMP R9, R6
+    CMP R10, R6
     JZ  incrementa_d
 
 	MOV R6, DECREMENTA_D
-    CMP R9, R6
+    CMP R10, R6
     JZ  decrementa_d
 
 	JMP fim_teclado			; se não for nenhuma das duas acaba a função
@@ -523,9 +666,9 @@ desenha_boneco:
 	push	R8
 	
 	MOV	R6, [R4]			; obtém a altura do boneco (n linhas)
-	ADD	R4, 2				; proxima palavra (largura/nºcolunas)
-	MOV R5, [R4]
-	MOV	R7, R5				; guardar o n colunas para poder dar reset em cada linha
+	ADD	R4, 2
+	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
+	MOV	R7, R5				; guardar para poder dar reset em cada linha
 	ADD R4, 2				; proxima palavra (cor do primeiro pixel)
 desenha_colunas:
 desenha_linhas:
