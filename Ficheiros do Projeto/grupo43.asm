@@ -23,7 +23,7 @@ TEC_COL   		EQU 0E000H	; endereco das colunas do teclado (periferico PIN)
 MASCARA   		EQU 0FH		; para esconder os primeiros 4 bits
 MIN_COLUNA		EQU 0		; primeira coluna
 MAX_COLUNA		EQU 63		; ultima coluna
-ATRASO			EQU	0FFFFH	; atraso para limitar a velocidade do rover
+ATRASO			EQU	0900H	; atraso para limitar a velocidade do rover
 
 ; Teclado
 LINHA_LEITURA	EQU 16		; linha a testar (5a linha, para se chegar à linha 0 voltar logo para a 1)
@@ -73,7 +73,7 @@ LARGURA_R		EQU 5	; largura
 
 ; Asteroides
 CONT_FAZE	EQU 0	; conta quantos movimentos fez desde que entrou na faze
-LINHA_A		EQU -1
+LINHA_A		EQU 0
 COLUNA_A	EQU 30
 
 
@@ -157,11 +157,11 @@ AST_FAZE_4_MAU:
 AST_FAZE_5_BOM:
 	WORD		5, 5
 
-	WORD		TRA , VER1, VER1, VER1, TRA
+	WORD		TRA,  VER1, VER1, VER1, TRA
 	WORD		VER1, VER2, VER1, VER1, VER1
 	WORD		VER1, VER1, VER1, VER2, VER1
 	WORD		VER1, VER1, VER1, VER1, VER1
-	WORD		TRA , VER2, VER1, VER1, TRA
+	WORD		TRA,  VER2, VER1, VER1, TRA
 
 AST_FAZE_5_MAU:
 	WORD		5, 5
@@ -387,21 +387,21 @@ carrega_asteroide:
 	PUSH	R10
 	PUSH	R11
 
-	MOV R5, 0
+	MOV R5, LINHA_A
 	MOV [R4], R5					; reset linha
 roll_the_dice:
-	CALL	dice_roll
+	CALL	dice_roll				; escolhe possivel coluna e tipo
 	MOV R5, ASTEROIDE_1
 	ADD R5, 2
 	MOV R6, [R5]
 	CMP R6, R10
-	JZ roll_the_dice
+	JZ roll_the_dice				; se a coluna já estiver ocupada escolhe outra
 	MOV R5, ASTEROIDE_2
 	ADD R5, 2
 	MOV R6, [R5]
 	CMP R6, R10
 	JZ roll_the_dice
-	MOV R5, ASTEROIDE_3
+	MOV R5, ASTEROIDE_3				; tem de verificar para todos os asteroides
 	ADD R5, 2
 	MOV R6, [R5]
 	CMP R6, R10
@@ -410,13 +410,13 @@ roll_the_dice:
 	ADD R5, 2
 	MOV R6, [R5]
 	CMP R6, R10
-	JZ roll_the_dice				; guarante que não mete o asteroide repetido
+	JZ roll_the_dice
 
 	ADD R4, 2
 	MOV [R4], R10					; reset coluna
 	ADD R4, 2
 	CMP R11, 1
-	JZ sequencia_bom				; reset tipo e desenho
+	JZ sequencia_bom				; reset tipo/sequensia de desenhos
 	MOV R5, SEQUENCIA_AST_MAU
 	MOV [R4], R5
 	JMP reset_contador
@@ -431,7 +431,7 @@ reset_contador:
 	MOV [R4], R6						; reset contador
 
 	SUB R4, 6
-	CALL	desenha_asteroide
+	CALL	desenha_asteroide			; desenha o asteroide no inicio
 
 	POP	R11
 	POP	R10
@@ -453,7 +453,7 @@ mexe_asteroide:
 	PUSH	R2
 
 	MOV R3, [R4]				; --> linhas
-	MOV R2, 16
+	MOV R2, 15
 	CMP R3, R2
 	JGE desenha_astro			; se já estiver na faze final apenas mexe para baixo
 	MOV R2, 33
@@ -462,7 +462,7 @@ mexe_asteroide:
 	ADD R4, 6
 	MOV R3, [R4]				; --> contador de faze
 	SUB R4, 6
-	CMP R3, 4						; mudar aqui para mudar a altura em que eles mudam de faze
+	CMP R3, 3					; mudar aqui para mudar a altura em que eles mudam de faze
 	JNZ desenha_astro			; mexe o asteroide se ainda não tiver de mudar de faze
 ; próxima faze
 	ADD R4, 6
@@ -572,16 +572,11 @@ fim_dice_roll:
 ;
 ; **********************************************************************
 user_input:
-	PUSH R0
 	PUSH R1
 	PUSH R2
-	PUSH R3
 	PUSH R4
-	PUSH R5
-	PUSH R6
 	PUSH R7
 	PUSH R8
-	PUSH R9
 	PUSH R10
 
 posição_boneco:
@@ -620,16 +615,11 @@ move_boneco:
 
 sai_user_input:
 	POP R10
-	POP R9
 	POP R8
 	POP R7
-	POP R6
-	POP R5
 	POP R4
-	POP R3
 	POP R2
 	POP R1
-	POP R0
 	RET
 
 ; **********************************************************************
@@ -781,7 +771,7 @@ fim_teclado:
 ; **********************************************************************
 atraso:
 
-	MOV R11, atraso		; quantos ciclos tem o atraso
+	MOV R11, ATRASO		; quantos ciclos tem o atraso
 ciclo_atraso:
 	SUB	R11, 1
 	JNZ	ciclo_atraso
@@ -802,18 +792,17 @@ desenha_boneco:
 	PUSH	R5
 	PUSH    R6
 	PUSH	R7
-	push	R8
 	
-	MOV	R6, [R4]			; obtém a altura do boneco (n linhas)
+	MOV	R6, [R4]			; --> altura/nº linhas
 	ADD	R4, 2
-	MOV R5, [R4]			; obtém a largura do boneco (n colunas)
+	MOV R5, [R4]			; --> largura/nº colunas
 	MOV	R7, R5				; guardar para poder dar reset em cada linha
 	ADD R4, 2				; proxima palavra (cor do primeiro pixel)
 desenha_colunas:
 desenha_linhas:
-	MOV	R3, [R4]			; obtém a cor do próximo pixel do boneco
+	MOV	R3, [R4]			; --> cor pixel
 	CALL	escreve_pixel	; pinta o pixel
-	ADD	R4, 2				; cor do próximo pixel
+	ADD	R4, 2				; próxima cor
     ADD R2, 1				; próxima coluna
     SUB R5, 1				; decrementa contador
     JNZ	desenha_linhas		; repete até acabar a linha
@@ -823,7 +812,6 @@ desenha_linhas:
 	SUB R6, 1				; decrementa contador
 	JNZ	desenha_colunas		; repete até acabar o desenho
 
-	POP R8
 	POP R7
 	POP R6
 	POP	R5
