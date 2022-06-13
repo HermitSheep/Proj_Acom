@@ -1,6 +1,6 @@
 ; *********************************************************************
 ; * Mateus Correia 1103557
-; * José Gallego 1102726,
+; * José Gallego 1102726
 ; * Henrique Santos 103629
 ; *
 ; * Titulo: Cuva de Asteroides.asm
@@ -35,6 +35,7 @@ DIREITA      	EQU 0FH		; tecla para mexer o rover para a direita
 ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
 INCREMENTA_D    EQU 1H	    ; incrementa display
 DECREMENTA_D    EQU 0H		; decrementa display
+DISPARA			EQU 0AH		; dispara um tiro
 
 ; Comandos media-center
 SELECIONA_ECRA			EQU	6004H	; seleciona ecrã em que escrever
@@ -171,6 +172,11 @@ AST_FAZE_5_MAU:
 	WORD		ENC, AMA, ENC,  AMA, ENC
 	WORD		ENC, TRA, TRA,  TRA, ENC
 
+MISSIL:
+	WORD		34, 64, 1, 1		; linha, coluna, altura, largura
+
+	WORD		ROX
+
 SEQUENCIA_AST_BOM:
 	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_BOM, AST_FAZE_4_BOM, AST_FAZE_5_BOM
 
@@ -197,7 +203,7 @@ CONTADOR_DISPLAY:
 
 inicio:
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado
-    MOV [APAGA_TODOS_ECRANS], R1				; apaga todos os pixels já desenhados
+    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
@@ -213,24 +219,137 @@ inicio:
 	CALL	carrega_asteroide			; carrega os asteroides
 
 	EI0						; permite interrupções 0 - 3
-	;EI1
+	EI1
 	;EI2					; (isto tem de estar depois de os asteroides serem carregados)
 	;EI3
 	EI						; permite interrupções (geral)
 
 comeco:
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
-	CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
+	;CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
 	JMP	comeco							; repete
 
-int_1:
 int_2:
 int_3:
 
 ; **********************************************************************
-; ASTEROIDES - Controla automáticamente os asteroides.
+; MISSEIL - Controla automáticamente os misseis.
 ;
-; Argumentos: R4 - Asteroide a ser mexido
+; **********************************************************************
+int_1:
+	DI
+	PUSH	R1
+	PUSH	R3
+	PUSH	R4
+
+	MOV R4, MISSIL
+	MOV R3, 34
+	MOV R4, [R4]
+	CMP R3, R4
+	JZ fim_int_1			; se não houver missil sai da interrupção
+
+	MOV R1, 2
+	MOV [APAGA_ECRA], R1	; apaga o missil
+	MOV R4, MISSIL
+	CALL	mexe_missil		; mexe o missil
+
+fim_int_1:
+	POP	R4
+	POP	R3
+	POP	R1
+	EI
+	RFE
+
+; **********************************************************************
+; MEXE_MISSIL - Desenha o missil na próxima posição.
+;
+; Argumentos: R4 - Missil
+;
+; **********************************************************************
+mexe_missil:
+	PUSH	R1
+	PUSH	R4
+
+	MOV R1, [R4]
+	SUB R1, 1
+	MOV [R4], R1			; mexe o missil para a linha seguinte
+	CMP R1, -1
+	JZ reset_missil			; se o missil estiver na ultima linha dar reset
+	CALL	desenha_missil
+	JMP fim_mexe_missil
+
+reset_missil:
+	MOV R1, 2
+	MOV [APAGA_ECRA], R1	; Apaga o missil
+	MOV R1, 34
+	MOV [R4], R1
+
+fim_mexe_missil:
+	POP R4
+	POP R1
+	RET
+
+; **********************************************************************
+; CARREGA_MISSIL - Desenha o missil no sitio certo.
+;
+; Argumentos: R4 - Missil
+;
+; **********************************************************************
+carrega_missil:
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
+	PUSH	R4
+
+	MOV R3, R4
+	MOV R4, DEF_ROVER
+	MOV R1, [R4]
+	ADD R4, 2
+	MOV R2, [R4]
+	SUB R1, 1			; 1 pixel acima do rover
+	ADD R2, 2			; na ponta do rover
+	MOV R4, R3
+	MOV [R4], R1
+	ADD R4, 2
+	MOV [R4], R2		; guarda posição
+	SUB R4, 2
+
+	CALL	desenha_missil	; para se quisermos mais misseis diferentes
+
+	POP	R4
+	POP	R3
+	POP	R2
+	POP	R1
+	RET
+
+; **********************************************************************
+; DESENHA_MISSIL - Desenha o missil no sitio certo.
+;
+; Argumentos: R4 - Missil
+;
+; **********************************************************************
+desenha_missil:
+	PUSH	R1
+	PUSH	R2
+	PUSH	R4
+	PUSH	R10
+
+	MOV R1, [R4]				; --> linha
+	ADD R4, 2
+	MOV R2, [R4]				; --> coluna
+	ADD R4, 2
+	MOV R10, 2					; escolhe o 3º ecrã
+	MOV [SELECIONA_ECRA], R10
+	CALL	desenha_boneco
+
+	POP	R10
+	POP	R4
+	POP	R2
+	POP	R1
+	RET
+
+; **********************************************************************
+; ASTEROIDES - Controla automáticamente os asteroides.
 ;
 ; **********************************************************************
 int_0:
@@ -258,7 +377,7 @@ int_0:
 ; **********************************************************************
 ; CARREGA_ASTEROIDE - Carrega o asteroide numa posição aleatória.
 ;
-; Argumentos: R4 - Asteroide a ser mexido
+; Argumentos: R4 - Asteroide a ser carregado
 ;
 ; **********************************************************************
 carrega_asteroide:
@@ -312,7 +431,7 @@ reset_contador:
 	MOV [R4], R6						; reset contador
 
 	SUB R4, 6
-	CALL desenha_asteroide
+	CALL	desenha_asteroide
 
 	POP	R11
 	POP	R10
@@ -324,6 +443,7 @@ reset_contador:
 ; **********************************************************************
 ; MEXE_ASTEROIDE - Desenha o asteroide especificado na próxima posição.
 ;					É aconsenhavel apagar o ecrã 1 antes de fazer esta função.
+;
 ; Argumentos: R4 - Asteroide a ser mexido
 ;
 ; **********************************************************************
@@ -371,7 +491,7 @@ desenha_astro:
 	ADD R3, 1
 	MOV [R4], R3				; incrementa o contador
 	SUB R4, 6
-	CALL desenha_asteroide
+	CALL	desenha_asteroide
 	
 fim_mexe_asteroides:
 	POP R2
@@ -465,16 +585,16 @@ user_input:
 	PUSH R10
 
 posição_boneco:
-	MOV	R4, DEF_ROVER					; endereço da tabela que define o boneco
-    MOV R1, [R4]						; R1 - linha do boneco
-	ADD R4, 2							; passa para a palavra seguinte (coluna)
-    MOV R2, [R4]						; R2 - coluna do boneco
+	MOV	R4, DEF_ROVER
+    MOV R1, [R4]						; --> linha do boneco
+	ADD R4, 2
+    MOV R2, [R4]						; --> coluna do boneco
 	ADD R4, 2							; passa para a palavra seguinte (altura)
 
 mostra_boneco:
 	MOV R10, 0							; escolhe o 1º ecrã
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
-	CALL	desenha_boneco				; desenha o boneco a partir da tabela
+	CALL	desenha_boneco
 
 espera_input:							; neste ciclo espera-se um input
 	MOV	R7, 0							; se nenhuma tecla for clicada, diz para não mexer
@@ -493,7 +613,7 @@ atrasa_rover:
 move_boneco:
 	MOV [APAGA_ECRA], R10				; apaga o 1º ecrã
 	ADD	R2, R7							; atualisa a coluna do rover de acordo com R7
-	MOV	R4, DEF_ROVER					; 
+	MOV	R4, DEF_ROVER
 	ADD R4, 2							; volta a ir buscar a posição do rover (coluna)
 	MOV [R4], R2						; atualiza a posição do rover
 
@@ -596,6 +716,10 @@ funcoes_teclas:
     CMP R10, R6
     JZ  decrementa_d
 
+	MOV R6, DISPARA
+    CMP R10, R6
+    JZ  dispara_tiro
+
 	JMP fim_teclado			; se não for nenhuma das duas acaba a função
 
 direita:
@@ -618,6 +742,16 @@ decrementa_d:
 	ADD R4, -1
 	MOV [DISPLAYS], R4
 	MOV [CONTADOR_DISPLAY], R4
+	JMP ha_tecla
+
+dispara_tiro:
+	MOV R4, MISSIL
+	MOV R4, [R4]
+	MOV R3, 32
+	CMP R4, R3
+	JLE fim_teclado			; se já houver um missil ele sai da função
+	MOV R4, MISSIL
+	CALL	carrega_missil
 	JMP ha_tecla
 
 ha_tecla:

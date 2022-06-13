@@ -717,7 +717,7 @@
       "sourcePinID" : 109,
       "targetPinID" : 5,
       "points" : [ {
-        "X" : 164,
+        "X" : 173,
         "Y" : 268
       }, {
         "X" : 211,
@@ -735,9 +735,9 @@
     "positionY" : 93,
     "simGuiVisibleInSimulation" : true,
     "simGuiXRelative" : 2,
-    "simGuiYRelative" : 32,
-    "simGuiWidth" : 859,
-    "simGuiHeight" : 811,
+    "simGuiYRelative" : 27,
+    "simGuiWidth" : 728,
+    "simGuiHeight" : 873,
     "clockPeriod" : 200,
     "startAutomatically" : false,
     "simulationMaster" : true,
@@ -1520,7 +1520,7 @@
     "positionY" : 247,
     "simGuiVisibleInSimulation" : true,
     "simGuiXRelative" : 747,
-    "simGuiYRelative" : 473,
+    "simGuiYRelative" : 466,
     "simGuiWidth" : 853,
     "simGuiHeight" : 427,
     "columnAddressNBits" : 6,
@@ -1528,7 +1528,7 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 51063,
-    "image paths" : [ "espaço.jpg", "WhatsApp Image 2022-06-01 at 1.14.35 PM.jpeg" ],
+    "image paths" : [ "WhatsApp Image 2022-06-01 at 1.14.35 PM.jpeg", "espaço.jpg" ],
     "sounds/videos settings" : [ {
       "filePathName" : "brrrrrrrrr.mp3",
       "relative sound volume" : 1.0,
