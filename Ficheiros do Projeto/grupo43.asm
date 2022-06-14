@@ -233,7 +233,7 @@ int_2:
 int_3:
 
 ; **********************************************************************
-; MISSEIL - Controla automáticamente os misseis.
+; MISSIL - Controla automáticamente os misseis.
 ;
 ; **********************************************************************
 int_1:
@@ -268,12 +268,14 @@ fim_int_1:
 ; **********************************************************************
 mexe_missil:
 	PUSH	R1
+	PUSH	R3
 	PUSH	R4
 
 	MOV R1, [R4]
 	SUB R1, 1
 	MOV [R4], R1			; mexe o missil para a linha seguinte
-	CMP R1, -1
+	MOV R3, 15				; linha até onde o missil vai
+	CMP R1, R3
 	JZ reset_missil			; se o missil estiver na ultima linha dar reset
 	CALL	desenha_missil
 	JMP fim_mexe_missil
@@ -286,6 +288,7 @@ reset_missil:
 
 fim_mexe_missil:
 	POP R4
+	POP	R3
 	POP R1
 	RET
 
@@ -589,7 +592,9 @@ posição_boneco:
 mostra_boneco:
 	MOV R10, 0							; escolhe o 1º ecrã
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
+	DI
 	CALL	desenha_boneco
+	EI
 
 espera_input:							; neste ciclo espera-se um input
 	MOV	R7, 0							; se nenhuma tecla for clicada, diz para não mexer
@@ -799,6 +804,9 @@ desenha_boneco:
 	MOV	R7, R5				; guardar para poder dar reset em cada linha
 	ADD R4, 2				; proxima palavra (cor do primeiro pixel)
 desenha_colunas:
+	MOV R3, 32
+	CMP R1, R3
+	JZ fim_desenha_boneco	; se a linha a desenhar estiver fora do ecrã acaba a função
 desenha_linhas:
 	MOV	R3, [R4]			; --> cor pixel
 	CALL	escreve_pixel	; pinta o pixel
@@ -812,6 +820,7 @@ desenha_linhas:
 	SUB R6, 1				; decrementa contador
 	JNZ	desenha_colunas		; repete até acabar o desenho
 
+fim_desenha_boneco:
 	POP R7
 	POP R6
 	POP	R5
