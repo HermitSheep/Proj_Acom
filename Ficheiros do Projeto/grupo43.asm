@@ -13,6 +13,18 @@
 ;	Manter os comentários e variaveis de cada bloco nivelados.
 ;	Não guardar registos globais.
 ;
+;
+; **********************************************************************
+; * Notas Para o Jogador	(comandos)
+; **********************************************************************
+;	Usa o Start (5) para começar o jogo. Se quiseres pausar volta a clicar
+;	no Start. A partir do ecrã de pausa podes acabar o jogo clicando em
+;	Select (6). Podes sair do ecrã de pausa clicando no Start. Podes
+;	sair do ecrã de morte clicando em Start.
+;	Para te mexeres usa as teclas (E) e (F). Para disparares usa a tecla
+;	(A).
+;	Diverte-te
+;
 ; **********************************************************************
 ; * Constantes
 ; **********************************************************************
@@ -36,6 +48,8 @@ ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
 INCREMENTA_D    EQU 1H	    ; incrementa display
 DECREMENTA_D    EQU 0H		; decrementa display
 DISPARA			EQU 0AH		; dispara um tiro
+START			EQU	5H		; começa ou pausa e continua o jogo
+SELECT			EQU	6H		; volta para o ecrã inicial a partir do de pausa ou de morte
 
 ; Comandos media-center
 SELECIONA_ECRA			EQU	6004H	; seleciona ecrã em que escrever
@@ -172,24 +186,28 @@ AST_FAZE_5_MAU:
 	WORD		ENC, AMA, ENC,  AMA, ENC
 	WORD		ENC, TRA, TRA,  TRA, ENC
 
-MISSIL:
-	WORD		34, 64, 1, 1		; linha, coluna, altura, largura
-
-	WORD		ROX
-
 SEQUENCIA_AST_BOM:
 	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_BOM, AST_FAZE_4_BOM, AST_FAZE_5_BOM
 
 SEQUENCIA_AST_MAU:
 	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_MAU, AST_FAZE_4_MAU, AST_FAZE_5_MAU
 
+MISSIL:
+	WORD		34, 64, 1, 1		; linha, coluna, altura, largura (posição missil)
+
+	WORD		ROX
+
 CONTADOR_DISPLAY:
-	WORD		0			;Numero que entra no display
+	WORD		0	; número que entra no display
+
+ESTADO_JOGO:
+	WORD		1	; estado em que o jogo está:
+					;	0 - inicial; 1 - a correr; 2 - pausado; 3 - morte
 
 
-; **********************************************************************
-; * Codigo
-; **********************************************************************
+; ######################################################################
+; MAIN
+; ######################################################################
 	PLACE	0
 
 ; Inicializações
@@ -200,8 +218,24 @@ CONTADOR_DISPLAY:
 ; Inicio programa
     MOV  R7, 0       		; inicia o contador a zero
     MOV [DISPLAYS], R7     	; inicia o display com o valor do contador
+	EI0						; permite interrupções 0 - 3
+	EI1
+	;EI2
+	;EI3
 
-inicio:
+
+int_2:
+int_3:
+
+; **********************************************************************
+; INICI0_JOGO - Passa do ecrã de começo para o de jogo.
+;
+; **********************************************************************
+para_jogo:
+	DI
+	PUSH	R1							; a partir d'aqui corre o jogo	
+	PUSH	R4
+
     MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado
     MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
@@ -209,28 +243,221 @@ inicio:
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
-	MOV R4, ASTEROIDE_1
+	MOV R4, ASTEROIDE_1					; carrega os asteroides no inicio
 	CALL	carrega_asteroide
 	MOV R4, ASTEROIDE_2
 	CALL	carrega_asteroide
 	MOV R4, ASTEROIDE_3
 	CALL	carrega_asteroide
 	MOV R4, ASTEROIDE_4
-	CALL	carrega_asteroide			; carrega os asteroides
+	CALL	carrega_asteroide
 
-	EI0						; permite interrupções 0 - 3
-	EI1
-	;EI2					; (isto tem de estar depois de os asteroides serem carregados)
-	;EI3
-	EI						; permite interrupções (geral)
+	MOV R4, DEF_ROVER					; reset da posição do rover
+	MOV R1, LINHA_R
+	MOV [R4], R1						; pode ser preciso carregar o rover logo a seguir por causa das interrupções
+	ADD R4, 2
+	MOV R1, COLUNA_R
+	MOV [R4], R1
 
-comeco:
+	MOV R4, MISSIL
+	MOV R1, 34							; reset missile
+	MOV [R4], R1
+
+	POP R4
+	POP	R1
+
+	EI
+
+comeco_para_jogo:
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
-	;CALL	atraso						; previne lag se o computador for UMA FUCKING MERDA
-	JMP	comeco							; repete
+	CMP R7, 2							; se não for clicado Start ou não Morrer repete
+	JZ tranzicoes
+	CMP R7, 4
+	JZ tranzicoes
+	JMP	comeco_para_jogo				; repete
 
-int_2:
-int_3:
+; **********************************************************************
+; JOGO_PAUSE - Pausa o jogo.					É preciso photoshopar um sinal de pausa grande para o cenário de fundo
+;
+; **********************************************************************
+jogo_pause:
+	DI
+	PUSH	R1							; a partir d'aqui fica no ecrâ de pausa
+
+	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV R1, 1							; escolhe a musica de fundo
+	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	POP	R1
+
+comeco_jogo_pause:
+	CALL	user_input					; espera por start ou select ser clicado
+	CMP R7, 2							; se não for clicado Start ou Select repete
+	JZ tranzicoes
+	CMP R7, 3
+	JZ tranzicoes
+	JMP	comeco_jogo_pause				; repete
+
+
+; **********************************************************************
+; PAUSE_JOGO - Continua o jogo.
+;
+; **********************************************************************
+pause_jogo:
+	DI
+	PUSH	R1							; a partir d'aqui corre o jogo
+
+	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV R1, 1							; escolhe a musica de fundo
+	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	POP	R1
+
+	EI
+
+comeco_pause_jogo:
+	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
+	CMP R7, 2							; se não for clicado Start ou não Morrer repete
+	JZ tranzicoes
+	CMP R7, 4
+	JZ tranzicoes
+	JMP	comeco_pause_jogo				; repete
+
+; **********************************************************************
+; JOGO_MORTE - Carrega ecrã morte e faz reset de tudo.			Era engrassado ter funções que imprimam o score
+;				(só é ácionado quando o rover morre)
+;
+; **********************************************************************
+jogo_morte:
+	DI
+	PUSH	R1							; a partir d'aqui fica no ecrã de morte
+
+    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
+	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV R1, 1							; escolhe a musica de fundo
+	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	POP	R1
+
+comeco_jogo_morte:
+	CALL	user_input					; espera por start ser clicado
+	CMP R7, 2							; se não for clicado Start ou Select repete
+	JZ tranzicoes
+	CMP R7, 3
+	JZ tranzicoes
+	JMP	comeco_jogo_morte				; repete
+
+
+; **********************************************************************
+; PARA_INICIO - Carrega ecrã de começo.
+;
+; **********************************************************************
+para_inicio:
+	DI
+	PUSH	R1							; a partir d'aqui fica no ecrã de inicio
+
+    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
+	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV R1, 1							; escolhe a musica de fundo
+	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	POP	R1
+
+comeco_para_inicio:
+	CALL	user_input					; espera por start ser clicado
+	CMP R7, 2							; se não for clicado Start repete
+	JZ tranzicoes
+	JMP	comeco_para_inicio
+
+; **********************************************************************
+; TRANZIÇÕES - Controla as tranzições nos estados do jogo.
+;				Não é uma função, é um cash de instruções.
+;
+; Argumentos: R7 - Start (2)/Select (3)/Morte (4)  (morte só é chamado pelo colisões)
+;
+; **********************************************************************
+tranzicoes:
+	DI
+	PUSH	R8
+	PUSH	R7
+
+	MOV R8, [ESTADO_JOGO]	; guarda o estado atual do jogo
+
+	CMP R7, 2
+	JZ t_start				; vê se foi clicado Start
+	CMP R7, 3
+	JZ t_select				; vê se foi clicado Select
+	CMP R7, 4
+	JZ t_morte				; vê se o rover Morreu (está no fim)
+
+t_select:
+	CMP R8, 2
+	JZ faz_para_inicio		; pause --> inicio
+	CMP R8, 3
+	JZ faz_para_inicio		; morte --> inicio
+
+t_start:
+	CMP R8, 0
+	JZ faz_para_jogo		; inicio --> jogo
+	CMP R8, 1
+	JZ faz_jogo_pause		; jogo --> pause
+	CMP R8, 2
+	JZ faz_pause_jogo		; pause --> jogo
+	CMP R8, 3
+	JZ faz_para_jogo		; morte --> jogo
+
+; Start
+faz_para_jogo:
+	MOV R8, 1				; --> jogo
+	MOV [ESTADO_JOGO], R8	; atualiza o estado do jogo
+
+	POP	R7					; desfaz os pushes do "tranzições"
+	POP	R8
+	JMP para_jogo			; vai para o estado do jogo
+
+faz_jogo_pause:
+	MOV R8, 2				; --> pausa
+	MOV [ESTADO_JOGO], R8
+
+	POP	R7
+	POP	R8
+	JMP jogo_pause
+
+faz_pause_jogo:
+	MOV R8, 1				; --> jogo
+	MOV [ESTADO_JOGO], R8
+
+	POP	R7
+	POP	R8
+	JMP pause_jogo
+
+;Select
+faz_para_inicio:
+	MOV R8, 0				; --> inicio
+	MOV [ESTADO_JOGO], R8
+
+	POP	R7
+	POP	R8
+	JMP para_inicio
+
+; Morte
+t_morte:
+	MOV R8, 3				; --> morte
+	MOV [ESTADO_JOGO], R8
+
+	POP	R7					; não precisa de fazer mais nada porque é chamado pelo colisões
+	POP	R8
+	JMP jogo_morte
+
+
+; ######################################################################
+; FUNÇÕES
+; ######################################################################
+
 
 ; **********************************************************************
 ; MISSIL - Controla automáticamente os misseis.
@@ -274,7 +501,7 @@ mexe_missil:
 	MOV R1, [R4]
 	SUB R1, 1
 	MOV [R4], R1			; mexe o missil para a linha seguinte
-	MOV R3, 15				; linha até onde o missil vai
+	MOV R3, 16				; linha até onde o missil vai
 	CMP R1, R3
 	JZ reset_missil			; se o missil estiver na ultima linha dar reset
 	CALL	desenha_missil
@@ -361,8 +588,8 @@ int_0:
 	PUSH	R4
 
 	MOV R1, 1
-	MOV [APAGA_ECRA], R1	; Apaga os asteroides
-	MOV R4, ASTEROIDE_1
+	MOV [APAGA_ECRA], R1	; apaga os asteroides
+	MOV R4, ASTEROIDE_1		; e mexe-los para as novas posições
 	CALL	mexe_asteroide
 	MOV R4, ASTEROIDE_2
 	CALL	mexe_asteroide
@@ -573,14 +800,20 @@ fim_dice_roll:
 ;			   Principalmente trata do movimento do rover, mas a função
 ;				teclado trata por natureza do resto dos inputs.
 ;
+; Retorna: R7 --> 2 se for clicado Start, 3 se Select e 4 se o rover tiver morrido.
+;
 ; **********************************************************************
 user_input:
 	PUSH R1
 	PUSH R2
 	PUSH R4
-	PUSH R7
 	PUSH R8
 	PUSH R10
+	
+; Verificação estado jogo antes de mexer o rover
+	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
+	CMP R8, 1							; se não estiver só vê o input
+	JNZ espera_input
 
 posição_boneco:
 	MOV	R4, DEF_ROVER
@@ -593,13 +826,32 @@ mostra_boneco:
 	MOV R10, 0							; escolhe o 1º ecrã
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	DI
-	CALL	desenha_boneco
-	EI
+	CALL	desenha_boneco				; impedem-se interrupções aqui para partes do rover
+	EI									; não serem impressas noutros ecrãs acidentalmente
 
 espera_input:							; neste ciclo espera-se um input
 	MOV	R7, 0							; se nenhuma tecla for clicada, diz para não mexer
 	CALL	teclado						; altera R7 para -1 Direita ou 1 Esquerda
-	
+
+; Vê se é preciso atualizar o estado do jogo
+	CMP R7, 2							; se não for clicado Start ou Select sai da função
+	JZ sai_user_input
+	CMP R7, 3
+	JZ sai_user_input
+; Verificação estado jogo antes de mexer o rover
+	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
+	CMP R8, 1							; se não estiver sai da função
+	JNZ sai_user_input
+; Verifica se é para disparar
+	CMP R7, 5
+	JZ dispara_missil					; vê se foi clicada a tecla para disparar
+	JMP ve_limites
+
+dispara_missil:
+	MOV R4, MISSIL
+	CALL	carrega_missil				; se ainda não houver um missil, carrega este
+	JMP sai_user_input					; depois sai da função
+
 ve_limites:
 	CALL	testa_limites				; vê se chegou aos limites do ecrã e se sim força R7 a 0
 	CMP	R7, 0
@@ -621,7 +873,6 @@ move_boneco:
 sai_user_input:
 	POP R10
 	POP R8
-	POP R7
 	POP R4
 	POP R2
 	POP R1
@@ -641,7 +892,7 @@ sai_user_input:
 ;				4-Se for para movimento continuo, saltar para fim_teclado:, se for
 ;					para fazer a ação uma só vez, saltar para ha_tecla
 ;
-; Argumento:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
+; Retorna:	R7  --> 1 se for para ir para a direita, -1 se para a esquerda
 ;
 ; **********************************************************************
 teclado:
@@ -715,6 +966,15 @@ funcoes_teclas:
     CMP R10, R6
     JZ  dispara_tiro
 
+	MOV R6, START
+    CMP R10, R6
+    JZ  start_func
+
+	MOV R6, SELECT
+    CMP R10, R6
+    JZ  select_func
+
+
 	JMP fim_teclado			; se não for nenhuma das duas acaba a função
 
 direita:
@@ -740,13 +1000,22 @@ decrementa_d:
 	JMP ha_tecla
 
 dispara_tiro:
-	MOV R4, MISSIL
+	MOV R4, MISSIL			; se já houver um missil ele sai da função
 	MOV R4, [R4]
-	MOV R3, 32
+	MOV R3, 32				; o valor standard do missil é 34
 	CMP R4, R3
-	JLE fim_teclado			; se já houver um missil ele sai da função
-	MOV R4, MISSIL
-	CALL	carrega_missil
+	JLE fim_teclado
+	MOV R7, 5
+	JMP ha_tecla
+
+start_func:
+	DI
+	MOV R7, 2				; se for precionado Start, R7 --> 2 e retorna
+	JMP ha_tecla
+
+select_func:
+	DI
+	MOV R7, 3				; se for precionado Select, R7 --> 3 e retorna
 	JMP ha_tecla
 
 ha_tecla:
