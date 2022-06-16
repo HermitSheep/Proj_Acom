@@ -36,6 +36,7 @@ MASCARA   		EQU 0FH		; para esconder os primeiros 4 bits
 MIN_COLUNA		EQU 0		; primeira coluna
 MAX_COLUNA		EQU 63		; ultima coluna
 ATRASO			EQU	0900H	; atraso para limitar a velocidade do rover
+TEMPO_COMECO	EQU	64H		; tempo com que o display começa
 
 ; Teclado
 LINHA_LEITURA	EQU 16		; linha a testar (5a linha, para se chegar à linha 0 voltar logo para a 1)
@@ -198,11 +199,18 @@ MISSIL:
 	WORD		ROX
 
 CONTADOR_DISPLAY:
-	WORD		0	; número que entra no display
+	WORD		0					; número que entra no display
 
 ESTADO_JOGO:
-	WORD		1	; estado em que o jogo está:
-					;	0 - inicial; 1 - a correr; 2 - pausado; 3 - morte
+	WORD		1					; estado em que o jogo está:
+									;	0 - inicial; 1 - a correr; 2 - pausado; 3 - morte
+
+CONT_ENERGIA:
+	WORD		0					; Contador de segundos até decrementar energia
+
+ENERGIA_ROVER:
+	WORD		TEMPO_COMECO		; Guarda a energia do rover
+									;	64H = 100 (dec)
 
 
 ; ######################################################################
@@ -216,15 +224,12 @@ ESTADO_JOGO:
 	MOV  BTE, tab			; inicializa BTE
 
 ; Inicio programa
-    MOV  R7, 0       		; inicia o contador a zero
-    MOV [DISPLAYS], R7     	; inicia o display com o valor do contador
 	EI0						; permite interrupções 0 - 3
 	EI1
-	;EI2
+	EI2
 	;EI3
 
 
-int_2:
 int_3:
 
 ; **********************************************************************
@@ -242,6 +247,11 @@ para_jogo:
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	MOV R4, TEMPO_COMECO
+	MOV [ENERGIA_ROVER], R4				; reset energia
+	MOV R3, 0
+	CALL	atualiza_energia			; reset display
 
 	MOV R4, ASTEROIDE_1					; carrega os asteroides no inicio
 	CALL	carrega_asteroide
@@ -460,6 +470,92 @@ t_morte:
 
 
 ; **********************************************************************
+; RELÓGIO ENERGIA - Diminui a energia de acordo com o relógio.
+;
+; **********************************************************************
+int_2:
+	DI
+	PUSH	R4
+	PUSH	R3
+	PUSH	R2
+
+	MOV R4, [CONT_ENERGIA]		; se tiverem passado 3 segundos decrementa a energia
+	CMP R4, 3
+	JZ decrementa_energia
+	ADD R4, 1
+	MOV [CONT_ENERGIA], R4
+	JMP fim_int_2
+
+decrementa_energia:
+	MOV R4, 0
+	MOV [CONT_ENERGIA], R4		; dá reset no contador de segundos
+	MOV R3, -5					; reduz a energia por 5
+	CALL	atualiza_energia	; atualiza a energia e o display
+	
+fim_int_2:
+	POP	R2
+	POP	R3
+	POP	R4
+	EI
+	RFE
+
+; **********************************************************************
+; HEXA_PARA_DEC - Converte um número hexadecimal para decimal.
+;					A conversão é feita com o método dado em SD.
+;
+; ARGUMENTOS: R4 - número (Retorna-o convertido)
+;
+; **********************************************************************
+hexa_para_dec:
+	PUSH	R3
+	PUSH	R2
+	PUSH	R1
+
+	MOV R3, R4			; ABC
+	MOV R2, 10
+	MOD R3, R2			; retira C por ABC % 10 = c
+	MOV R1, R3			; guarda-o na posição do terceiro digito
+
+	MOV R3, R4
+	DIV R3, R2			; separa o AB, ABC // 10 = AB
+	MOD R3, R2			; separa o B, AB % 10 = B
+	SHL R3, 4
+	ADD R1, R3			; guarda-o na posição do segundo digito
+
+	MOV R3, R4
+	DIV R3, R2
+	DIV R3, R2			; separa o A, ABC // 10 = AB, AB // 10 = B
+	SHL R3, 8
+	ADD R1, R3			; guarda-o na posição do primeiro digito
+
+	MOV R4, R1			; para o resultado ficar em R4
+
+	POP	R1
+	POP	R2
+	POP	R3
+	RET
+
+; **********************************************************************
+; INCREMENTA_ENERGIA - Expõe a eneregia no display.
+;
+; ARGUMENTOS: R3 - valor a incrementar ou decrementar
+;
+; **********************************************************************
+atualiza_energia:
+	PUSH	R4
+	PUSH	R3
+
+	MOV R4, [ENERGIA_ROVER]
+	ADD R4, R3					; incrementa a energia
+	MOV [ENERGIA_ROVER], R4		; guarda a energia ainda em hexadecimal
+	CALL	hexa_para_dec		; converte a energia para decimal
+	MOV [DISPLAYS], R4
+
+	POP	R3
+	POP	R4
+	RET
+
+; **********************************************************************
 ; MISSIL - Controla automáticamente os misseis.
 ;
 ; **********************************************************************
@@ -469,7 +565,7 @@ int_1:
 	PUSH	R3
 	PUSH	R4
 
-	MOV R4, MISSIL
+	MOV R4, MISSIL			; vê se há missil
 	MOV R3, 34
 	MOV R4, [R4]
 	CMP R3, R4
@@ -804,11 +900,12 @@ fim_dice_roll:
 ;
 ; **********************************************************************
 user_input:
-	PUSH R1
-	PUSH R2
-	PUSH R4
-	PUSH R8
-	PUSH R10
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
+	PUSH	R4
+	PUSH	R8
+	PUSH	R10
 	
 ; Verificação estado jogo antes de mexer o rover
 	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
@@ -848,6 +945,8 @@ espera_input:							; neste ciclo espera-se um input
 	JMP ve_limites
 
 dispara_missil:
+	MOV R3, -5							; reduz a energia por 5
+	CALL	atualiza_energia			; atualiza a energia e o display
 	MOV R4, MISSIL
 	CALL	carrega_missil				; se ainda não houver um missil, carrega este
 	JMP sai_user_input					; depois sai da função
@@ -874,6 +973,7 @@ sai_user_input:
 	POP R10
 	POP R8
 	POP R4
+	POP R3
 	POP R2
 	POP R1
 	RET
