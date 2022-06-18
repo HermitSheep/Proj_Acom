@@ -567,6 +567,7 @@ atualiza_energia:
 	MOV [ENERGIA_ROVER], R4		; guarda a energia ainda em hexadecimal
 	CALL	hexa_para_dec		; converte a energia para decimal
 	MOV [DISPLAYS], R4
+	
 	CMP R4, 0
 	JZ morreu_por_energia		; se o rover ficar sem energia morre
 	JMP fim_atualiza_energia
@@ -931,7 +932,7 @@ user_input:
 	PUSH	R8
 	PUSH	R10
 	
-; Verificação estado jogo antes de mexer o rover
+; Verificação estado jogo antes de mexer o rover (não desenhar o boneco sem ser preciso)
 	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
 	CMP R8, 1							; se não estiver só vê o input
 	JNZ espera_input
@@ -960,7 +961,11 @@ espera_input:							; neste ciclo espera-se um input
 	CMP R7, 3
 	JZ sai_user_input					; Select
 	CMP R7, 4
-	JZ sai_user_input					; Morreu
+	JZ sai_user_input					; Morreu	
+; Verificação estado jogo antes de mexer o rover (não mexer o boneco sem ser preciso)
+	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
+	CMP R8, 1							; se não estiver só vê o input
+	JNZ espera_input
 ; Verifica se é para disparar
 	CMP R7, 5
 	JZ dispara_missil					; vê se foi clicada a tecla para disparar
