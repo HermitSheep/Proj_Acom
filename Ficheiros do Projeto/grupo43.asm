@@ -1,5 +1,5 @@
 ; *********************************************************************
-; * Mateus Correia 1103557
+; * Mateus Correia 1103557 (*)
 ; * José Gallego 1102726
 ; * Henrique Santos 103629
 ; *
@@ -46,8 +46,6 @@ CONTADOR_C   	EQU 0		; ajuda a converter as colunas de 1-2-4-8 para 0-1-2-3
 ; Funcões teclas  (PARA ADICIONAR NOVAS FUNÇOÕES, INSTRUÇÕES ESTÃO NA FUNÇÃO TECLADO)
 DIREITA      	EQU 0FH		; tecla para mexer o rover para a direita
 ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
-INCREMENTA_D    EQU 1H	    ; incrementa display
-DECREMENTA_D    EQU 0H		; decrementa display
 DISPARA			EQU 0AH		; dispara um tiro
 START			EQU	5H		; começa ou pausa e continua o jogo
 SELECT			EQU	6H		; volta para o ecrã inicial a partir do de pausa ou de morte
@@ -57,6 +55,7 @@ SELECIONA_ECRA			EQU	6004H	; seleciona ecrã em que escrever
 DEFINE_LINHA    		EQU 600AH	; define a linha em que escrever
 DEFINE_COLUNA   		EQU 600CH	; define a coluna em que escrever
 DEFINE_PIXEL    		EQU 6012H	; define a cor do pixel a escrever
+OBTEM_PIXEL				EQU	6014H	; dá 0 se o pixel não tiver cor e 1 se tiver
 APAGA_AVISO     		EQU 6040H	; apaga o aviso de nenhum cenário selecionado
 APAGA_ECRA		 		EQU 6000H	; apaga o ecrã selecionado
 APAGA_TODOS_ECRANS		EQU 6002H	; apaga todos os ecrãs
@@ -79,6 +78,11 @@ CIN1	EQU 07777H	; cinzento longe
 CIN2	EQU 0FAAAH	; cinzento normal
 WHI		EQU 0FFFFH	; branco (white)
 TRA		EQU 00000H	; transparente
+
+; Ecrãs
+ECRA_ROVER		EQU	2	; especifica o ecrã do rover
+ECRA_ASTEROIDES	EQU	1	; especifica o ecrã do asteroides
+ECRA_MISSIL		EQU	0	; especifica o ecrã do missil
 
 ; Rover
 LINHA_R        	EQU 27	; linha de começo do rover (a meio do ecrã)
@@ -281,9 +285,9 @@ para_jogo:
 comeco_para_jogo:
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
 	CMP R7, 2							; se não for clicado Start ou não Morrer repete
-	JZ tranzicoes
-	CMP R7, 4
-	JZ tranzicoes
+	JZ tranzicoes						; --> pause
+	CMP R7, 4	
+	JZ tranzicoes						; --> morreu
 	JMP	comeco_para_jogo				; repete
 
 ; **********************************************************************
@@ -304,9 +308,9 @@ jogo_pause:
 comeco_jogo_pause:
 	CALL	user_input					; espera por start ou select ser clicado
 	CMP R7, 2							; se não for clicado Start ou Select repete
-	JZ tranzicoes
+	JZ tranzicoes						; --> jogo
 	CMP R7, 3
-	JZ tranzicoes
+	JZ tranzicoes						; --> inicio
 	JMP	comeco_jogo_pause				; repete
 
 
@@ -330,9 +334,9 @@ pause_jogo:
 comeco_pause_jogo:
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
 	CMP R7, 2							; se não for clicado Start ou não Morrer repete
-	JZ tranzicoes
+	JZ tranzicoes						; --> pause
 	CMP R7, 4
-	JZ tranzicoes
+	JZ tranzicoes						; --> morreu
 	JMP	comeco_pause_jogo				; repete
 
 ; **********************************************************************
@@ -344,7 +348,7 @@ jogo_morte:
 	DI
 	PUSH	R1							; a partir d'aqui fica no ecrã de morte
 
-    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
+	;MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
@@ -355,9 +359,9 @@ jogo_morte:
 comeco_jogo_morte:
 	CALL	user_input					; espera por start ser clicado
 	CMP R7, 2							; se não for clicado Start ou Select repete
-	JZ tranzicoes
+	JZ tranzicoes						; --> jogo
 	CMP R7, 3
-	JZ tranzicoes
+	JZ tranzicoes						; --> inicio
 	JMP	comeco_jogo_morte				; repete
 
 
@@ -470,7 +474,20 @@ t_morte:
 
 
 ; **********************************************************************
-; RELÓGIO ENERGIA - Diminui a energia de acordo com o relógio.
+; COLISÕES_ASTRO_ROVER - Lida com as colisões entre asteroides e rovers.
+;						Se o rover tocar num asteroide mau explode e morre.
+;						Se tocar num bom, o asteroide desaparece e ele ganha 
+;						energia.
+;
+; Retorna: R7 --> 4 morreu
+;
+; **********************************************************************
+colisoen_astro_rover:
+
+
+
+; **********************************************************************
+; RELÓGIO_ENERGIA - Diminui a energia de acordo com o relógio.
 ;
 ; **********************************************************************
 int_2:
@@ -550,7 +567,15 @@ atualiza_energia:
 	MOV [ENERGIA_ROVER], R4		; guarda a energia ainda em hexadecimal
 	CALL	hexa_para_dec		; converte a energia para decimal
 	MOV [DISPLAYS], R4
+	
+	CMP R4, 0
+	JZ morreu_por_energia		; se o rover ficar sem energia morre
+	JMP fim_atualiza_energia
 
+morreu_por_energia:
+	MOV R7, 4					; ou seja, manda sinal de morte
+
+fim_atualiza_energia:
 	POP	R3
 	POP	R4
 	RET
@@ -907,7 +932,7 @@ user_input:
 	PUSH	R8
 	PUSH	R10
 	
-; Verificação estado jogo antes de mexer o rover
+; Verificação estado jogo antes de mexer o rover (não desenhar o boneco sem ser preciso)
 	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
 	CMP R8, 1							; se não estiver só vê o input
 	JNZ espera_input
@@ -931,14 +956,16 @@ espera_input:							; neste ciclo espera-se um input
 	CALL	teclado						; altera R7 para -1 Direita ou 1 Esquerda
 
 ; Vê se é preciso atualizar o estado do jogo
-	CMP R7, 2							; se não for clicado Start ou Select sai da função
-	JZ sai_user_input
+	CMP R7, 2							; se for clicado Start ou Select sai da função
+	JZ sai_user_input					; Start
 	CMP R7, 3
-	JZ sai_user_input
-; Verificação estado jogo antes de mexer o rover
+	JZ sai_user_input					; Select
+	CMP R7, 4
+	JZ sai_user_input					; Morreu	
+; Verificação estado jogo antes de mexer o rover (não mexer o boneco sem ser preciso)
 	MOV R8, [ESTADO_JOGO]				; vê se o jogo está a correr
-	CMP R8, 1							; se não estiver sai da função
-	JNZ sai_user_input
+	CMP R8, 1							; se não estiver só vê o input
+	JNZ espera_input
 ; Verifica se é para disparar
 	CMP R7, 5
 	JZ dispara_missil					; vê se foi clicada a tecla para disparar
@@ -1054,14 +1081,6 @@ funcoes_teclas:
     CMP R10, R6
     JZ  esquerda
 
-	MOV R6, INCREMENTA_D
-    CMP R10, R6
-    JZ  incrementa_d
-
-	MOV R6, DECREMENTA_D
-    CMP R10, R6
-    JZ  decrementa_d
-
 	MOV R6, DISPARA
     CMP R10, R6
     JZ  dispara_tiro
@@ -1084,20 +1103,6 @@ direita:
 esquerda:
     MOV R7, -1      		; Output: mexe para a esquerda
 	JMP fim_teclado
-
-incrementa_d:
-	MOV R4, [CONTADOR_DISPLAY]
-	ADD R4, +1
-	MOV [DISPLAYS], R4
-	MOV [CONTADOR_DISPLAY], R4
-	JMP ha_tecla
-
-decrementa_d:
-	MOV R4, [CONTADOR_DISPLAY]
-	ADD R4, -1
-	MOV [DISPLAYS], R4
-	MOV [CONTADOR_DISPLAY], R4
-	JMP ha_tecla
 
 dispara_tiro:
 	MOV R4, MISSIL			; se já houver um missil ele sai da função
