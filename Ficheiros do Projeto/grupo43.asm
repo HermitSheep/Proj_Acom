@@ -7,6 +7,23 @@
 ; *********************************************************************
 ;
 ; **********************************************************************
+; * Notas Finais (funções que não funcionam)
+; **********************************************************************
+;  Se houverem dois asteroides um ao lado do outro e um missil acertar no
+; pixel mais à direita do asteroide da esquerda, o da direita é que explode,
+; porque está mais próximo. Como uma solução envolve uma grande re-estroturação
+; de uma função importante e foi detetado relativamente em cima do praso de
+; entrega, a solução foi considerada de importancia secundária.
+;
+;  Se o rover colidir lateralmente com um asteroide bom dá erro. Isto
+; não foi corrigido pois ao usar break points o erro deixa de acontecer.
+; De tal forma uma solução não foi encontrada. (Por exemplo, se se usar
+; break point na instrução "CALL	desenha_explosao", 4 linhas a seguir,
+; o erro deixa de ocorrer. O mesmo também se verifica para algumas linhas 
+; antes da instrução em causa, incluindo a CALL	encontra_asteroide. Se se 
+; correr o programa em step by step o erro também para de ocorrer.)
+;
+; **********************************************************************
 ; * Notas Para o Programador
 ; **********************************************************************
 ;	Utilizar tabs em vez de espaços sempre que possivel.
@@ -46,9 +63,9 @@ CONTADOR_C   	EQU 0		; ajuda a converter as colunas de 1-2-4-8 para 0-1-2-3
 ; Funcões teclas  (PARA ADICIONAR NOVAS FUNÇOÕES, INSTRUÇÕES ESTÃO NA FUNÇÃO TECLADO)
 DIREITA      	EQU 0FH		; tecla para mexer o rover para a direita
 ESQUERDA      	EQU 0EH		; tecla para mexer o rover para a esquerda
-DISPARA			EQU 0AH		; dispara um tiro
-START			EQU	5H		; começa ou pausa e continua o jogo
-SELECT			EQU	6H		; volta para o ecrã inicial a partir do de pausa ou de morte
+DISPARA			EQU 0BH		; dispara um tiro
+START			EQU	0H		; começa ou pausa e continua o jogo
+SELECT			EQU	1H		; volta para o ecrã inicial a partir do de pausa ou de morte
 
 ; Comandos media-center
 SELECIONA_ECRA			EQU	6004H	; seleciona ecrã em que escrever
@@ -65,6 +82,7 @@ TOCA_MUSICA_LOOP		EQU	605CH	; toca musica em loop até ser parado
 PAUSA_MUSICA			EQU 605EH	; pausa o som selecionado
 CONTINUA_MUSICA			EQU 6060H	; continua musica selecionada de onde tinha sido pausada
 TERMINA_MUSICA			EQU 6066h	; termina a musica selecionada
+TERMINA_MUSICAS			EQU 6068h	; termina todas as musicas
 
 ; Paleta de cores
 ENC		EQU	0FF00H	; vermelho (encarnado)
@@ -95,6 +113,8 @@ CONT_FAZE	EQU 0	; conta quantos movimentos fez desde que entrou na faze
 LINHA_A		EQU 0
 COLUNA_A	EQU 30
 
+; Missil
+LINHA_M		EQU 34	; linha do missil quando ele mão está carregado
 
 ; *********************************************************************************
 ; * Dados 
@@ -191,6 +211,15 @@ AST_FAZE_5_MAU:
 	WORD		ENC, AMA, ENC,  AMA, ENC
 	WORD		ENC, TRA, TRA,  TRA, ENC
 
+EXPLOSAO:
+	WORD		5, 5
+
+	WORD		TRA,  AZU1, TRA,  AZU1, TRA
+	WORD		AZU1, TRA,  AZU1, TRA,  AZU1
+	WORD		TRA,  AZU1, TRA,  AZU1, TRA
+	WORD		AZU1, TRA,  AZU1, TRA,  AZU1
+	WORD		TRA,  AZU1, TRA,  AZU1, TRA
+
 SEQUENCIA_AST_BOM:
 	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_BOM, AST_FAZE_4_BOM, AST_FAZE_5_BOM
 
@@ -206,7 +235,7 @@ CONTADOR_DISPLAY:
 	WORD		0					; número que entra no display
 
 ESTADO_JOGO:
-	WORD		1					; estado em que o jogo está:
+	WORD		0					; estado em que o jogo está:
 									;	0 - inicial; 1 - a correr; 2 - pausado; 3 - morte
 
 CONT_ENERGIA:
@@ -214,7 +243,6 @@ CONT_ENERGIA:
 
 ENERGIA_ROVER:
 	WORD		TEMPO_COMECO		; Guarda a energia do rover
-									;	64H = 100 (dec)
 
 
 ; ######################################################################
@@ -226,6 +254,7 @@ ENERGIA_ROVER:
 
 	MOV  SP, SP_inicial	 	; inicializa SP para a palavra a seguir à última da pilha
 	MOV  BTE, tab			; inicializa BTE
+	MOV R7, 0
 
 ; Inicio programa
 	EI0						; permite interrupções 0 - 3
@@ -234,7 +263,31 @@ ENERGIA_ROVER:
 	;EI3
 
 
-int_3:
+int_3:						; Para fotura expanção
+
+; **********************************************************************
+; PARA_INICIO - Carrega ecrã de começo.
+;
+; **********************************************************************
+para_inicio:
+	DI
+	PUSH	R1							; a partir d'aqui fica no ecrã de inicio
+
+    MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado
+    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
+	MOV	R1, 1							; escolhe o cenário de fundo (prédefinida no media center)
+    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV [TERMINA_MUSICAS], R1			; termina musica anterior
+	MOV R1, 6							; escolhe a musica de fundo
+	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+
+	POP	R1
+
+comeco_para_inicio:
+	CALL	user_input					; espera por start ser clicado
+	CMP R7, 2							; se não for clicado Start repete
+	JZ tranzicoes
+	JMP	comeco_para_inicio
 
 ; **********************************************************************
 ; INICI0_JOGO - Passa do ecrã de começo para o de jogo.
@@ -245,10 +298,10 @@ para_jogo:
 	PUSH	R1							; a partir d'aqui corre o jogo	
 	PUSH	R4
 
-    MOV [APAGA_AVISO], R1				; apaga o aviso de nenhum cenário selecionado
     MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV [TERMINA_MUSICAS], R1			; termina musica anterior
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
@@ -284,6 +337,7 @@ para_jogo:
 
 comeco_para_jogo:
 	CALL	user_input					; faz tudo o que tem a haver com input de utilizador
+	CALL	colisoes_astro_rover		; vê colisões com o rover
 	CMP R7, 2							; se não for clicado Start ou não Morrer repete
 	JZ tranzicoes						; --> pause
 	CMP R7, 4	
@@ -298,9 +352,11 @@ jogo_pause:
 	DI
 	PUSH	R1							; a partir d'aqui fica no ecrâ de pausa
 
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+	MOV	R1, 2							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
-	MOV R1, 1							; escolhe a musica de fundo
+	MOV R1, 1
+	MOV [PAUSA_MUSICA], R1			; termina musica anterior
+	MOV R1, 2							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
 	POP	R1
@@ -324,8 +380,10 @@ pause_jogo:
 
 	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+	MOV R1, 2
+	MOV [TERMINA_MUSICA], R1			; termina musica anterior
 	MOV R1, 1							; escolhe a musica de fundo
-	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
+	MOV [CONTINUA_MUSICA], R1			; toca musica de fundo
 
 	POP	R1
 
@@ -348,10 +406,10 @@ jogo_morte:
 	DI
 	PUSH	R1							; a partir d'aqui fica no ecrã de morte
 
-	;MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+	MOV	R1, 3							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
-	MOV R1, 1							; escolhe a musica de fundo
+	MOV [TERMINA_MUSICAS], R1			; termina musica anterior
+	MOV R1, 5							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
 
 	POP	R1
@@ -363,29 +421,6 @@ comeco_jogo_morte:
 	CMP R7, 3
 	JZ tranzicoes						; --> inicio
 	JMP	comeco_jogo_morte				; repete
-
-
-; **********************************************************************
-; PARA_INICIO - Carrega ecrã de começo.
-;
-; **********************************************************************
-para_inicio:
-	DI
-	PUSH	R1							; a partir d'aqui fica no ecrã de inicio
-
-    MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
-    MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
-	MOV R1, 1							; escolhe a musica de fundo
-	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
-
-	POP	R1
-
-comeco_para_inicio:
-	CALL	user_input					; espera por start ser clicado
-	CMP R7, 2							; se não for clicado Start repete
-	JZ tranzicoes
-	JMP	comeco_para_inicio
 
 ; **********************************************************************
 ; TRANZIÇÕES - Controla as tranzições nos estados do jogo.
@@ -474,6 +509,59 @@ t_morte:
 
 
 ; **********************************************************************
+; COLISOES_ASTRO_MISSIL - Lida com as colisões entre asteroides e misseis.
+;						Se o missil tocar num asteroide mau explode e dá
+;						energia.
+;						Se tocar num bom o asteroide explode.
+;
+; **********************************************************************
+colisoes_astro_missil:
+	PUSH	R1
+	PUSH	R3
+	PUSH	R4
+	PUSH	R5
+	PUSH	R6
+	PUSH	R8
+
+	CALL	verifica_missil			; vê se o rover colidio com algo
+	CMP R4, 0
+	JZ fim_colisoes_astro_missil	; se não tiver colisão sai
+	MOV R4, MISSIL
+	CALL	encontra_asteroide		; se houver vê qual o asteroide mais próximo
+
+	MOV R4, R6						; guarda o asteroide no R4
+
+	ADD R6, 4						; passa para a sequencia
+	MOV R6, [R6]
+	MOV R6, [R6]
+	MOV R1, AST_FAZE_5_BOM			; vê se o asteroide é bom
+	CMP R6, R1				
+	JZ e_ast_bom_m		
+
+; e_ast_mau
+	MOV R3, 5
+	CALL	atualiza_energia		; incrementa a energia por 5
+
+e_ast_bom_m:; o mau tambẽm faz isto
+	MOV R1, ECRA_MISSIL				; escolhe o ecrã do missil
+	MOV [APAGA_ECRA], R1			; apaga o missil
+	CALL	desenha_explosao		; explode o asteroide e carrega-o de novo
+	MOV R1, LINHA_M 
+	MOV [MISSIL], R1				; dá reset do missil
+
+	MOV R1, 4
+	MOV [INICIA_MUSICA], R1			; efeito som explosão
+fim_colisoes_astro_missil:
+
+	POP	R8
+	POP	R6
+	POP	R5
+	POP	R4
+	POP	R3
+	POP	R1
+	RET
+
+; **********************************************************************
 ; COLISÕES_ASTRO_ROVER - Lida com as colisões entre asteroides e rovers.
 ;						Se o rover tocar num asteroide mau explode e morre.
 ;						Se tocar num bom, o asteroide desaparece e ele ganha 
@@ -482,8 +570,353 @@ t_morte:
 ; Retorna: R7 --> 4 morreu
 ;
 ; **********************************************************************
-colisoen_astro_rover:
+colisoes_astro_rover:
+	DI
+	PUSH	R1
+	PUSH	R3
+	PUSH	R4
+	PUSH	R5
+	PUSH	R6
+	PUSH	R8
 
+	CALL	verifica_rover			; vê se o rover colidio com algo
+	CMP R4, 0
+	JZ fim_colisoes_astro_rover		; se não tiver colisão sai
+	MOV R4, DEF_ROVER
+	DI
+	CALL	encontra_asteroide		; se houver vê qual o/s asteroides mais próximos
+	DI
+; primeiro asteroide
+	MOV R4, R6						; guarda o asteroide no R4
+
+	ADD R6, 4						; passa para a sequencia
+	
+	MOV R6, [R6]
+	MOV R6, [R6]
+	MOV R1, AST_FAZE_5_BOM
+	CMP R6, R1						; vê se o asteroide é bom
+	JZ e_ast_bom_r		
+
+; e_ast_mau_r
+	CALL	desenha_explosao		; explode o asteroide e carrega-o de novo
+	MOV R7, 4						; dá sinal de morte
+	JMP segundo_asteroide
+
+e_ast_bom_r:
+	EI
+	CALL	carrega_asteroide		; carrega o asteroide sem o explodir
+	MOV R3, 10
+	CALL	atualiza_energia		; incrementa a energia por 10
+
+segundo_asteroide:
+	CMP R8, -1						; vê se há um segundo asteroide
+	JZ fim_colisoes_astro_rover		; se não houver sai da função
+
+	MOV R4, R8						; guarda o asteroide no R4
+	ADD R8, 4						; passa para a 
+	MOV R8, [R8]
+	CMP R8, R1						; vê se o asteroide é bom
+	JZ e_ast_bom_2_r		
+
+; e_ast_mau_2_r
+	CALL	desenha_explosao		; explode o asteroide e carrega-o de novo
+	MOV R7, 4						; dá sinal de morte
+	JMP fim_colisoes_astro_rover
+
+e_ast_bom_2_r:
+	EI
+	CALL	carrega_asteroide		; carrega o asteroide sem o explodir
+	MOV R3, 10
+	CALL	atualiza_energia		; incrementa a energia por 10
+
+fim_colisoes_astro_rover:
+	POP	R8
+	POP	R6
+	POP	R5
+	POP	R4
+	POP	R3
+	POP	R1
+	RET
+
+; **********************************************************************
+; DESENHA_EXPLOSÃO - Desenha a explosão na posição do asteroide dado e 
+;						dá re-carrega o asteroide.
+;
+; Argumentos: R4 - Asteroide a ser explodido
+;
+; **********************************************************************
+desenha_explosao:
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
+	PUSH	R4
+	PUSH	R10
+
+posição_explosao:
+	MOV R3, R4
+
+    MOV R1, [R4]						; linha do asteroide
+	ADD R4, 2
+    MOV R2, [R4]						; coluna do asteroide
+	DI
+	MOV R10, ECRA_ASTEROIDES			; escolhe o ecrã dos asteroides
+	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
+	MOV R4, EXPLOSAO
+	CALL	desenha_boneco					; desenha a explosão
+	EI
+
+	MOV R4, R3
+	CALL	carrega_asteroide				; recarrega o asteroide que exlpodio
+
+	POP R10
+	POP R4
+	POP R3
+	POP R2
+	POP R1
+	RET
+	
+
+; **********************************************************************
+; ENCONTRA_ASTEROIDE - Encontra o asteroide mais próximo.
+;
+; Argomentos: R4 --> endereço do rover/missil
+; Retorna: R6 --> endereço do asteroide mais próximo
+;		   R8 --> endereço do asteroide mais próximo se à mesma distancia
+;			  --> -1 se só houver um asteroide mais próximo
+;
+; **********************************************************************
+encontra_asteroide:
+	PUSH	R2
+	PUSH	R3
+	PUSH	R4
+	PUSH	R5
+	DI
+	MOV R6, -1
+	MOV R8, -1
+	MOV R3, R4				; copia o endereço do boneco
+
+; primeiro asteroide
+	MOV R2, ASTEROIDE_1		; seleciona o asteroide a verificar
+	CALL	distancia		; calcula a distancia entre os dois
+	CMP R4, 5
+	JGE next_1				; se a distancia for maior que 4 vê o prox asteroide
+	CMP R5, 5
+	JGE next_1
+	MOV R6, ASTEROIDE_1		; se ambas as distancias forem inferiores guarda o asteroide
+; segundo asteroide
+next_1:
+	MOV R2, ASTEROIDE_2		; seleciona o asteroide a verificar
+	CALL	distancia		; calcula a distancia entre os dois
+	CMP R4, 5
+	JGE next_2				; se a distancia for maior que 4 vê o prox asteroide
+	CMP R5, 5
+	JGE next_2
+	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
+	JNZ para_R8_1
+	MOV R6, ASTEROIDE_2		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_2
+para_R8_1:
+	MOV R8, ASTEROIDE_2
+; terceiro asteroide
+next_2:
+	MOV R2, ASTEROIDE_3		; seleciona o asteroide a verificar
+	CALL	distancia		; calcula a distancia entre os dois
+	CMP R4, 5
+	JGE next_3				; se a distancia for maior que 4 vê o prox asteroide
+	CMP R5, 5
+	JGE next_3
+	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
+	JNZ para_R8_2
+	MOV R6, ASTEROIDE_3		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_3
+para_R8_2:
+	MOV R8, ASTEROIDE_3
+; quarto asteroide
+next_3:
+	MOV R2, ASTEROIDE_4		; seleciona o asteroide a verificar
+	CALL	distancia		; calcula a distancia entre os dois
+	CMP R4, 5
+	JGE next_4				; se a distancia for maior que 4 vê o prox asteroide
+	CMP R5, 5
+	JGE next_4
+	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
+	JNZ para_R8_3
+	MOV R6, ASTEROIDE_4		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_4
+para_R8_3:
+	MOV R8, ASTEROIDE_4
+
+next_4:
+	POP	R5
+	POP	R4
+	POP	R3
+	POP	R2
+	RET
+
+; **********************************************************************
+; DISTANCIA - Calcula as distncias horizontal e vertical entre dois objetos.
+;
+; Argumentos: R2 --> asteroide, R3 --> boneco  a comparar
+; Retorna: R4 --> horizontal
+;		   R5 --> vertical
+;
+; **********************************************************************
+distancia:					; A -> asteroide, B -> boneco
+	PUSH	R2
+	PUSH	R3
+	PUSH	R6
+	PUSH	R7
+
+; Distancia vertical
+	MOV R6, [R2]
+	MOV R7, [R3]
+
+	CMP R6, R7				; compara as linhas
+	JGE ast_maior_v
+	SUB R7, R6				; se A < B, faz A - B
+	MOV R5, R7				; guarda a distancia
+	JMP dist_horizontal
+
+ast_maior_v:
+	SUB R6, R7				; se A > B, faz A - B
+	MOV R5, R6				; guarda a distancia vertical em R5
+
+dist_horizontal:
+	MOV R6, [R2+2]
+	MOV R7, [R3+2]
+
+	CMP R6, R7				; compara as linhas
+	JGE ast_maior_h
+	SUB R7, R6				; se A < B, faz B - A
+	MOV R4, R7				; guarda a distancia horizontal em R4
+	JMP fim_distancia
+ast_maior_h:
+	SUB R6, R7				; se A > B, faz A - B
+	MOV R4, R6				; guarda a distancia horizontal em R4
+
+fim_distancia:
+	POP	R7
+	POP	R6
+	POP	R3
+	POP	R2
+	RET
+
+; **********************************************************************
+; VERIFICA_MISSIL - Vê se há um asteroide em colisão com o missil.
+;
+; Retorna: R4 --> 0 não há colisão, 1 há
+;
+; **********************************************************************
+verifica_missil:
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
+
+	MOV R1, [MISSIL]			; guarda a linha do rover
+	MOV R2, [MISSIL+2]			; guarda a coluna do rover
+	MOV R4, 0					; se não houver colisão mantem o 0
+
+	MOV R10, ECRA_ASTEROIDES	; escolhe o ecrã dos asteroides
+	MOV [SELECIONA_ECRA], R10	; seleciona o ecrã em que vai escrever
+
+	CALL	obtem_pixel			; verifica o pixel da bala
+	CMP R3, 1
+	JZ ha_colisao_m
+	JMP fim_verifica_missil
+
+ha_colisao_m:
+	MOV R4, 1					; se houver colisão passa para 1
+
+fim_verifica_missil:
+	POP	R3
+	POP	R2
+	POP	R1
+	RET
+
+
+; **********************************************************************
+; VERIFICA_ROVER - Vê se há um asteroide em colisão com o rover.
+;
+; Retorna: R4 --> 0 não há colisão, 1 há
+;
+; **********************************************************************
+verifica_rover:
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
+
+	DI
+	MOV R10, ECRA_ASTEROIDES	; escolhe o ecrã dos asteroides
+	MOV [SELECIONA_ECRA], R10	; seleciona o ecrã em que vai escrever
+
+	MOV R1, [DEF_ROVER]			; guarda a linha do rover
+	MOV R2, [DEF_ROVER+2]		; guarda a coluna do rover
+	MOV R4, 0					; se não houver colisão mantem o 0
+
+	ADD R1, 2					; verifica o primeiro pixel da esquerda
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	ADD R1, 2					; verifica o pixel amarelo de baixo/esquerda
+	ADD R2, 1
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	ADD R2, 2					; verifica o pixel amarelo de baixo/direita
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	SUB R1, 2					; verifica o primeiro pixel da direita
+	ADD R2, 1
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	SUB R1, 1					; verifica o segundo pixel da direita
+	SUB R2, 1
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	SUB R2, 2					; verifica o segundo pixel da sequerda
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+
+	SUB R1, 1					; verifica o pixel do meio
+	ADD R2, 1
+	CALL	obtem_pixel
+	CMP R3, 1
+	JZ ha_colisao_r
+	JMP fim_verifica_rover
+
+ha_colisao_r:
+	MOV R4, 1					; se houver colisão passa para 1
+
+fim_verifica_rover:
+	EI
+	POP	R3
+	POP	R2
+	POP	R1
+	RET
+
+; **********************************************************************
+; OBTEM_PIXEL - Vê se o pixel especificado está colorido ou não.
+;
+; Argumentos: R1 -> linha, R2, -> coluna
+; Retorna: R3 -> 0 transparente / 1 tem cor
+;
+; **********************************************************************
+obtem_pixel:
+
+	MOV  [DEFINE_LINHA],	R1	; seleciona a linha
+	MOV  [DEFINE_COLUNA],	R2	; seleciona a coluna
+	MOV  R3, [OBTEM_PIXEL]		; obtém a cor do pixel na linha e coluna já selecionadas
+
+	RET
 
 
 ; **********************************************************************
@@ -590,16 +1023,14 @@ int_1:
 	PUSH	R3
 	PUSH	R4
 
-	MOV R4, MISSIL			; vê se há missil
-	MOV R3, 34
-	MOV R4, [R4]
+	MOV R4, [MISSIL]				; vê se há missil
+	MOV R3, LINHA_M
 	CMP R3, R4
-	JZ fim_int_1			; se não houver missil sai da interrupção
+	JZ fim_int_1					; se não houver missil sai da interrupção
 
-	MOV R1, 2
-	MOV [APAGA_ECRA], R1	; apaga o missil
-	MOV R4, MISSIL
-	CALL	mexe_missil		; mexe o missil
+	MOV R1, ECRA_MISSIL				; escolhe o ecrã do missil
+	MOV [APAGA_ECRA], R1			; apaga o missil
+	CALL	mexe_missil				; mexe o missil
 
 fim_int_1:
 	POP	R4
@@ -611,28 +1042,27 @@ fim_int_1:
 ; **********************************************************************
 ; MEXE_MISSIL - Desenha o missil na próxima posição.
 ;
-; Argumentos: R4 - Missil
-;
 ; **********************************************************************
 mexe_missil:
 	PUSH	R1
 	PUSH	R3
 	PUSH	R4
 
-	MOV R1, [R4]
+	MOV R1, [MISSIL]
 	SUB R1, 1
-	MOV [R4], R1			; mexe o missil para a linha seguinte
+	MOV [MISSIL], R1			; mexe o missil para a linha seguinte
 	MOV R3, 16				; linha até onde o missil vai
 	CMP R1, R3
 	JZ reset_missil			; se o missil estiver na ultima linha dar reset
+	MOV R4, MISSIL
 	CALL	desenha_missil
 	JMP fim_mexe_missil
 
 reset_missil:
-	MOV R1, 2
+	MOV R1, ECRA_MISSIL		; escolhe o ecrã do missil
 	MOV [APAGA_ECRA], R1	; Apaga o missil
-	MOV R1, 34
-	MOV [R4], R1
+	MOV R1, LINHA_M
+	MOV [MISSIL], R1
 
 fim_mexe_missil:
 	POP R4
@@ -643,8 +1073,6 @@ fim_mexe_missil:
 ; **********************************************************************
 ; CARREGA_MISSIL - Desenha o missil no sitio certo.
 ;
-; Argumentos: R4 - Missil
-;
 ; **********************************************************************
 carrega_missil:
 	PUSH	R1
@@ -652,17 +1080,16 @@ carrega_missil:
 	PUSH	R3
 	PUSH	R4
 
-	MOV R3, R4
-	MOV R4, DEF_ROVER
+	MOV R4, DEF_ROVER		; guarda a posição do rover
 	MOV R1, [R4]
 	ADD R4, 2
 	MOV R2, [R4]
-	SUB R1, 1			; 1 pixel acima do rover
-	ADD R2, 2			; na ponta do rover
-	MOV R4, R3
+	SUB R1, 1				; 1 pixel acima do rover
+	ADD R2, 2				; na ponta do rover
+	MOV R4, MISSIL			; guarda a nova posição no missil
 	MOV [R4], R1
 	ADD R4, 2
-	MOV [R4], R2		; guarda posição
+	MOV [R4], R2			; guarda posição
 	SUB R4, 2
 
 	CALL	desenha_missil	; para se quisermos mais misseis diferentes
@@ -685,14 +1112,18 @@ desenha_missil:
 	PUSH	R4
 	PUSH	R10
 
-	MOV R1, [R4]				; --> linha
+	MOV R1, [R4]					; --> linha
 	ADD R4, 2
-	MOV R2, [R4]				; --> coluna
+	MOV R2, [R4]					; --> coluna
 	ADD R4, 2
-	MOV R10, 2					; escolhe o 3º ecrã
+	DI
+	MOV R10, ECRA_MISSIL			; escolhe o ecrã do missil
 	MOV [SELECIONA_ECRA], R10
 	CALL	desenha_boneco
 
+	CALL	colisoes_astro_missil	; apaga o missil se ele colidir com algo
+
+	EI
 	POP	R10
 	POP	R4
 	POP	R2
@@ -709,8 +1140,8 @@ int_0:
 	PUSH	R4
 
 	MOV R1, 1
-	MOV [APAGA_ECRA], R1	; apaga os asteroides
-	MOV R4, ASTEROIDE_1		; e mexe-los para as novas posições
+	MOV [APAGA_ECRA], R1			; apaga os asteroides
+	MOV R4, ASTEROIDE_1				; e mexe-los para as novas posições
 	CALL	mexe_asteroide
 	MOV R4, ASTEROIDE_2
 	CALL	mexe_asteroide
@@ -718,6 +1149,8 @@ int_0:
 	CALL	mexe_asteroide
 	MOV R4, ASTEROIDE_4
 	CALL	mexe_asteroide
+
+	CALL	colisoes_astro_rover	; vê colisões com o rover
 
 	POP	R4
 	POP	R1
@@ -857,10 +1290,10 @@ fim_mexe_asteroides:
 ;
 ; **********************************************************************
 desenha_asteroide:
-	PUSH R1
-	PUSH R2
-	PUSH R4
-	PUSH R10
+	PUSH	R1
+	PUSH	R2
+	PUSH	R4
+	PUSH	R10
 
 posição_asteroide:
     MOV R1, [R4]						; linha do asteroide
@@ -871,7 +1304,7 @@ posição_asteroide:
 	MOV R4, [R4]						; desenho do asteroide
 
 mostra_asteroide:
-	MOV R10, 1							; escolhe o 2º ecrã
+	MOV R10, ECRA_ASTEROIDES			; escolhe o ecrã dos asteroides
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
 
@@ -889,9 +1322,9 @@ mostra_asteroide:
 ;
 ; **********************************************************************
 dice_roll:
-	PUSH R1
-	PUSH R2
-	PUSH R3
+	PUSH	R1
+	PUSH	R2
+	PUSH	R3
 
     MOV	R2, TEC_LIN   		; endereco do teclado (para perguntar a uma linha se tem tecla)
     MOV	R3, TEC_COL   		; endereco do teclado (para receber resposta)
@@ -945,7 +1378,7 @@ posição_boneco:
 	ADD R4, 2							; passa para a palavra seguinte (altura)
 
 mostra_boneco:
-	MOV R10, 0							; escolhe o 1º ecrã
+	MOV R10, ECRA_ROVER					; escolhe o ecrã do rover
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	DI
 	CALL	desenha_boneco				; impedem-se interrupções aqui para partes do rover
@@ -969,13 +1402,15 @@ espera_input:							; neste ciclo espera-se um input
 ; Verifica se é para disparar
 	CMP R7, 5
 	JZ dispara_missil					; vê se foi clicada a tecla para disparar
-	JMP ve_limites
+	JMP ve_limites						; se não for para disparar vê o movimento como normal
 
 dispara_missil:
 	MOV R3, -5							; reduz a energia por 5
 	CALL	atualiza_energia			; atualiza a energia e o display
 	MOV R4, MISSIL
 	CALL	carrega_missil				; se ainda não houver um missil, carrega este
+	MOV R1, 3
+	MOV [INICIA_MUSICA], R1				; efeito som explosão
 	JMP sai_user_input					; depois sai da função
 
 ve_limites:
@@ -989,6 +1424,7 @@ atrasa_rover:
 	CALL	atraso						; Se o rover estiver demasiado rápido alterem nas Constantes
 
 move_boneco:
+	MOV R10, ECRA_ROVER
 	MOV [APAGA_ECRA], R10				; apaga o 1º ecrã
 	ADD	R2, R7							; atualisa a coluna do rover de acordo com R7
 	MOV	R4, DEF_ROVER
@@ -1052,6 +1488,16 @@ espera_linha:
     MOVB R0, [R3]       	; recebe resposta
     SUB  R6, 1          	; decrementa o contador das linhas
     AND  R0, R5         	; isola os bits de output do teclado
+
+	DI
+	CMP R7, 4				; se a nave já tiver morrido sai do teclado
+	JZ fim_teclado
+	MOV R8, [ESTADO_JOGO]	; vê se o jogo está a correr
+	CMP R8, 1				; se não estiver só vê o input
+	JNZ depois_ei			; para não fazer o EI sem dever
+	EI
+depois_ei:
+
     CMP  R0, 0
     JZ   espera_linha   	; se nenhuma tecla premida, repete
 
@@ -1105,13 +1551,12 @@ esquerda:
 	JMP fim_teclado
 
 dispara_tiro:
-	MOV R4, MISSIL			; se já houver um missil ele sai da função
-	MOV R4, [R4]
+	MOV R4, [MISSIL]		; se já houver um missil ele sai da função
 	MOV R3, 32				; o valor standard do missil é 34
-	CMP R4, R3
+	CMP R4, R3				; vê se o missil está carregado se não
 	JLE fim_teclado
-	MOV R7, 5
-	JMP ha_tecla
+	MOV R7, 5				; se não estiver dá sinal para disparar
+	JMP ha_tecla			; se estiver passa à frente
 
 start_func:
 	DI
@@ -1161,6 +1606,10 @@ ciclo_atraso:
 ; **********************************************************************
 ; DESENHA_BONECO - Desenha um boneco (especificar com R4) na linha e
 ;			    coluna indicadas com a forma e cor definidas na tabela indicada.
+;
+; Argomentos: R4 -> endereço boneco
+;			  R1 -> linha inicial
+;			  R2 -> coluna inicial
 ;
 ; **********************************************************************
 desenha_boneco:
