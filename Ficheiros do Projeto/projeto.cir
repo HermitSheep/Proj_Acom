@@ -1,7 +1,7 @@
 {
   "comment" : "This is a JSON file describing a digital circuit, which can be loaded into the SEPE (Simulador Especial Para Ensino), a computer architecture simulator.",
-  "savedWithSimulatorVersion" : "2.1.3",
-  "savedWithSimulatorBuildOn" : "2022-05-27  at  13:52:58",
+  "savedWithSimulatorVersion" : "2.1.4",
+  "savedWithSimulatorBuildOn" : "2022-06-17  at  13:23:36",
   "editorLocked" : false,
   "startAutomatically" : true,
   "showConnectionColors" : false,
@@ -734,10 +734,10 @@
     "positionX" : 215,
     "positionY" : 93,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : -748,
-    "simGuiYRelative" : 0,
+    "simGuiXRelative" : 0,
+    "simGuiYRelative" : 27,
     "simGuiWidth" : 859,
-    "simGuiHeight" : 1079,
+    "simGuiHeight" : 811,
     "clockPeriod" : 200,
     "startAutomatically" : false,
     "simulationMaster" : true,
@@ -1448,8 +1448,8 @@
     "positionX" : 815,
     "positionY" : 507,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : -1404,
-    "simGuiYRelative" : 337,
+    "simGuiXRelative" : 1054,
+    "simGuiYRelative" : 263,
     "simGuiWidth" : 130,
     "simGuiHeight" : 163,
     "columns" : 4,
@@ -1491,8 +1491,8 @@
     "positionX" : 855,
     "positionY" : 387,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : -1434,
-    "simGuiYRelative" : 95,
+    "simGuiXRelative" : 1224,
+    "simGuiYRelative" : 121,
     "simGuiWidth" : 216,
     "simGuiHeight" : 186,
     "nHexaDigits" : 3,
@@ -1519,8 +1519,8 @@
     "positionX" : 675,
     "positionY" : 247,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : -1920,
-    "simGuiYRelative" : 539,
+    "simGuiXRelative" : 747,
+    "simGuiYRelative" : 466,
     "simGuiWidth" : 853,
     "simGuiHeight" : 427,
     "columnAddressNBits" : 6,
@@ -1528,7 +1528,7 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 51063,
-    "image paths" : [ "WhatsApp Image 2022-06-01 at 1.14.35 PM.jpeg", "espaço.jpg" ],
+    "image paths" : [ "WhatsApp Image 2022-06-01 at 1.14.35 PM.jpeg", "inicio.jpg", "pausa.jpg", "death_screeen.jpg" ],
     "sounds/videos settings" : [ {
       "filePathName" : "brrrrrrrrr.mp3",
       "relative sound volume" : 1.0,
@@ -1537,6 +1537,36 @@
       "playAsClip" : false
     }, {
       "filePathName" : "Doom OST  E1M1  At Dooms Gate.mp3",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : false
+    }, {
+      "filePathName" : "Dark_Souls_Bonfire_and_Main_Theme_O_(getmp3.pro).mp3",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : false
+    }, {
+      "filePathName" : "disparo.wav",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : false
+    }, {
+      "filePathName" : "EXPLOSAO.mp3",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : false
+    }, {
+      "filePathName" : "Rick_Astley_-_Never_Gonna_Give_You_(getmp3.pro).mp3",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : false
+    }, {
+      "filePathName" : "David Bowie  Space Oddity Official Video.mp3",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
