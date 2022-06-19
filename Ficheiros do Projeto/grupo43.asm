@@ -313,7 +313,7 @@ jogo_pause:
 	DI
 	PUSH	R1							; a partir d'aqui fica no ecrâ de pausa
 
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+	MOV	R1, 2							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
@@ -364,7 +364,7 @@ jogo_morte:
 	PUSH	R1							; a partir d'aqui fica no ecrã de morte
 
 	;MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+	MOV	R1, 3							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
@@ -389,7 +389,7 @@ para_inicio:
 	PUSH	R1							; a partir d'aqui fica no ecrã de inicio
 
     MOV [APAGA_TODOS_ECRANS], R1		; apaga todos os pixels já desenhados
-	MOV	R1, 0							; escolhe o cenário de fundo (prédefinida no media center)
+	MOV	R1, 1							; escolhe o cenário de fundo (prédefinida no media center)
     MOV	[SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
 	MOV R1, 1							; escolhe a musica de fundo
 	MOV [TOCA_MUSICA_LOOP], R1			; toca musica de fundo
@@ -497,6 +497,7 @@ t_morte:
 ; **********************************************************************
 colisoes_astro_missil:
 	PUSH	R1
+	PUSH	R3
 	PUSH	R4
 	PUSH	R5
 	PUSH	R6
@@ -505,6 +506,7 @@ colisoes_astro_missil:
 	CALL	verifica_missil			; vê se o rover colidio com algo
 	CMP R4, 0
 	JZ fim_colisoes_astro_missil	; se não tiver colisão sai
+	MOV R4, MISSIL
 	CALL	encontra_asteroide		; se houver vê qual o asteroide mais próximo
 
 	MOV R4, R6						; guarda o asteroide no R4
@@ -523,7 +525,7 @@ e_ast_bom_m:; o mau tambẽm faz isto
 	MOV [APAGA_ECRA], R1			; apaga o missil
 	CALL	desenha_explosao		; explode o asteroide e carrega-o de novo
 	MOV R1, LINHA_M 
-	MOV [MISSIL], R1		; dá reset do missil
+	MOV [MISSIL], R1				; dá reset do missil
 
 fim_colisoes_astro_missil:
 
@@ -531,6 +533,7 @@ fim_colisoes_astro_missil:
 	POP	R6
 	POP	R5
 	POP	R4
+	POP	R3
 	POP	R1
 	RET
 
@@ -555,6 +558,7 @@ colisoes_astro_rover:
 	CALL	verifica_rover			; vê se o rover colidio com algo
 	CMP R4, 0
 	JZ fim_colisoes_astro_rover		; se não tiver colisão sai
+	MOV R4, DEF_ROVER
 	CALL	encontra_asteroide		; se houver vê qual o/s asteroides mais próximos
 
 ; primeiro asteroide
@@ -613,27 +617,29 @@ fim_colisoes_astro_rover:
 desenha_explosao:
 	PUSH R1
 	PUSH R2
+	PUSH R3
 	PUSH R4
 	PUSH R10
 
 posição_explosao:
+	MOV R3, R4
+
     MOV R1, [R4]						; linha do asteroide
 	ADD R4, 2
     MOV R2, [R4]						; coluna do asteroide
-	ADD R4, 2							; passa para a palavra seguinte (sequencia)
-	MOV R4, EXPLOSAO
-	CALL desenha_boneco					; desenha a explosão
-
-mostra_explosao:
+	DI
 	MOV R10, ECRA_ASTEROIDES			; escolhe o ecrã dos asteroides
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
-	CALL	desenha_boneco				; desenha o boneco a partir da tabela
+	MOV R4, EXPLOSAO
+	CALL desenha_boneco					; desenha a explosão
+	EI
 
-	SUB R4, 4
+	MOV R4, R3
 	CALL carrega_asteroide				; recarrega o asteroide que exlpodio
 
 	POP R10
 	POP R4
+	POP R3
 	POP R2
 	POP R1
 	RET
@@ -657,51 +663,55 @@ encontra_asteroide:
 	MOV R6, -1
 	MOV R8, -1
 	MOV R3, R4				; copia o endereço do boneco
+
 ; primeiro asteroide
 	MOV R2, ASTEROIDE_1		; seleciona o asteroide a verificar
 	CALL	distancia		; calcula a distancia entre os dois
-	CMP R4, 4
+	CMP R4, 5
 	JGE next_1				; se a distancia for maior que 4 vê o prox asteroide
-	CMP R5, 4
+	CMP R5, 5
 	JGE next_1
 	MOV R6, ASTEROIDE_1		; se ambas as distancias forem inferiores guarda o asteroide
 ; segundo asteroide
 next_1:
 	MOV R2, ASTEROIDE_2		; seleciona o asteroide a verificar
 	CALL	distancia		; calcula a distancia entre os dois
-	CMP R4, 4
+	CMP R4, 5
 	JGE next_2				; se a distancia for maior que 4 vê o prox asteroide
-	CMP R5, 4
+	CMP R5, 5
 	JGE next_2
 	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
 	JNZ para_R8_1
 	MOV R6, ASTEROIDE_2		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_2
 para_R8_1:
 	MOV R8, ASTEROIDE_2
 ; terceiro asteroide
 next_2:
 	MOV R2, ASTEROIDE_3		; seleciona o asteroide a verificar
 	CALL	distancia		; calcula a distancia entre os dois
-	CMP R4, 4
+	CMP R4, 5
 	JGE next_3				; se a distancia for maior que 4 vê o prox asteroide
-	CMP R5, 4
+	CMP R5, 5
 	JGE next_3
 	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
 	JNZ para_R8_2
 	MOV R6, ASTEROIDE_3		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_3
 para_R8_2:
 	MOV R8, ASTEROIDE_3
 ; quarto asteroide
 next_3:
 	MOV R2, ASTEROIDE_4		; seleciona o asteroide a verificar
 	CALL	distancia		; calcula a distancia entre os dois
-	CMP R4, 4
+	CMP R4, 5
 	JGE next_4				; se a distancia for maior que 4 vê o prox asteroide
-	CMP R5, 4
+	CMP R5, 5
 	JGE next_4
 	CMP R6, -1				; se já houver um asteroide no R6 guarda no R7
 	JNZ para_R8_3
 	MOV R6, ASTEROIDE_4		; se ambas as distancias forem inferiores guarda o asteroide
+	JMP next_4
 para_R8_3:
 	MOV R8, ASTEROIDE_4
 
@@ -726,33 +736,34 @@ distancia:					; A -> asteroide, B -> boneco
 	PUSH	R6
 	PUSH	R7
 
-; Distancia horizontal
+; Distancia vertical
 	MOV R6, [R2]
 	MOV R7, [R3]
 
 	CMP R6, R7				; compara as linhas
-	JGE ast_maior_h
-	SUB R7, R6				; se A < B, faz B - A
-	MOV R7, R4
+	JGE ast_maior_v
+	SUB R7, R6				; se A < B, faz A - B
+	MOV R5, R7				; guarda a distancia
+	JMP dist_horizontal
 
-ast_maior_h:
-	SUB R6, R7				; se A > B, faz A - B
-	MOV R6, R4
+ast_maior_v:
+	MOV R5, 7				; se o boneco estiver acima do asteroide não pode ter colisão
+							; por isso meto um numero maior que 4
 
-; Distancia vertical
+dist_horizontal:
 	MOV R6, [R2+2]
 	MOV R7, [R3+2]
 
 	CMP R6, R7				; compara as linhas
-	JGE ast_maior_v
+	JGE ast_maior_h
 	SUB R7, R6				; se A < B, faz B - A
-	MOV R7, 7				; se o boneco estiver acima do asteroide não pode ter colisão
-							; por isso meto um numero maior que 4
-
-ast_maior_v:
+	MOV R4, R7				; guarda a distancia horizontal em R4
+	JMP fim_distancia
+ast_maior_h:
 	SUB R6, R7				; se A > B, faz A - B
-	MOV R6, R5
+	MOV R4, R6				; guarda a distancia horizontal em R4
 
+fim_distancia:
 	POP	R7
 	POP	R6
 	POP	R3
@@ -803,6 +814,7 @@ verifica_rover:
 	PUSH	R2
 	PUSH	R3
 
+	DI
 	MOV R10, ECRA_ASTEROIDES	; escolhe o ecrã dos asteroides
 	MOV [SELECIONA_ECRA], R10	; seleciona o ecrã em que vai escrever
 
@@ -810,7 +822,7 @@ verifica_rover:
 	MOV R2, [DEF_ROVER+2]		; guarda a coluna do rover
 	MOV R4, 0					; se não houver colisão mantem o 0
 
-	SUB R1, 2					; verifica o primeiro pixel da esquerda
+	ADD R1, 2					; verifica o primeiro pixel da esquerda
 	CALL	obtem_pixel
 	CMP R3, 1
 	JZ ha_colisao_r
@@ -842,6 +854,7 @@ ha_colisao_r:
 	MOV R4, 1					; se houver colisão passa para 1
 
 fim_verifica_rover:
+	EI
 	POP	R3
 	POP	R2
 	POP	R1
@@ -1060,12 +1073,14 @@ desenha_missil:
 	ADD R4, 2
 	MOV R2, [R4]				; --> coluna
 	ADD R4, 2
+	DI
 	MOV R10, ECRA_MISSIL		; escolhe o ecrã do missil
 	MOV [SELECIONA_ECRA], R10
 	CALL	desenha_boneco
 
 	CALL	colisoes_astro_missil	; apaga o missil se ele colidir com algo
 
+	EI
 	POP	R10
 	POP	R4
 	POP	R2
@@ -1091,6 +1106,8 @@ int_0:
 	CALL	mexe_asteroide
 	MOV R4, ASTEROIDE_4
 	CALL	mexe_asteroide
+
+	;CALL	colisoes_astro_rover		; vê colisões com o rover
 
 	POP	R4
 	POP	R1
@@ -1247,7 +1264,6 @@ mostra_asteroide:
 	MOV R10, ECRA_ASTEROIDES			; escolhe o ecrã dos asteroides
 	MOV [SELECIONA_ECRA], R10			; seleciona o ecrã em que vai escrever
 	CALL	desenha_boneco				; desenha o boneco a partir da tabela
-
 	POP R10
 	POP R4
 	POP R2
