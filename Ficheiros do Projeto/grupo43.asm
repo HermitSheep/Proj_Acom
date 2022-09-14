@@ -1,5 +1,5 @@
 ; *********************************************************************
-; * Mateus Correia 1103557 (*)
+; * Mateus Correia 1103557 
 ; * José Gallego 1102726
 ; * Henrique Santos 103629
 ; *
@@ -34,12 +34,12 @@
 ; **********************************************************************
 ; * Notas Para o Jogador	(comandos)
 ; **********************************************************************
-;	Usa o Start (5) para começar o jogo. Se quiseres pausar volta a clicar
+;	Usa o Start (0) para começar o jogo. Se quiseres pausar volta a clicar
 ;	no Start. A partir do ecrã de pausa podes acabar o jogo clicando em
-;	Select (6). Podes sair do ecrã de pausa clicando no Start. Podes
+;	Select (1). Podes sair do ecrã de pausa clicando no Start. Podes
 ;	sair do ecrã de morte clicando em Start.
 ;	Para te mexeres usa as teclas (E) e (F). Para disparares usa a tecla
-;	(A).
+;	(B).
 ;	Diverte-te
 ;
 ; **********************************************************************
@@ -115,6 +115,9 @@ COLUNA_A	EQU 30
 
 ; Missil
 LINHA_M		EQU 34	; linha do missil quando ele mão está carregado
+COLUNA_M	EQU 64	; coluna inicial do missil
+
+; Constantes
 
 ; *********************************************************************************
 ; * Dados 
@@ -158,8 +161,8 @@ AST_FAZE_1:								; tabela de desenhos dos asteroides
 	WORD		CIN1					; desenho do boneco
 
 AST_FAZE_2:
-	WORD		2, 2
-
+	WORD		2, 2					; deixo a altura e largura em numeros para 
+										; prevenir esquecimento no caso de alterações ao desenho
 	WORD		CIN2, CIN2
 	WORD		CIN2, CIN2
 
@@ -227,7 +230,7 @@ SEQUENCIA_AST_MAU:
 	WORD		AST_FAZE_1, AST_FAZE_2, AST_FAZE_3_MAU, AST_FAZE_4_MAU, AST_FAZE_5_MAU
 
 MISSIL:
-	WORD		34, 64, 1, 1		; linha, coluna, altura, largura (posição missil)
+	WORD		LINHA_M, COLUNA_M, 1, 1		; linha, coluna, altura, largura (posição missil)
 
 	WORD		ROX
 
@@ -327,7 +330,7 @@ para_jogo:
 	MOV [R4], R1
 
 	MOV R4, MISSIL
-	MOV R1, 34							; reset missile
+	MOV R1, LINHA_M						; reset missile
 	MOV [R4], R1
 
 	POP R4
